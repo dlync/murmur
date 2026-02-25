@@ -1,50 +1,58 @@
-# Welcome to your Expo app 👋
+# murmur.
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A quiet journaling app for daily reflection. Built with React Native + Expo.
 
-## Get started
+## Design
 
-1. Install dependencies
+Ported from the murmur Flask web app — warm linen palette, editorial typography, 
+minimal UI. Replicated the original CSS design tokens directly in StyleSheet:
 
-   ```bash
-   npm install
-   ```
+- `#F2EFE9` background (warm linen)
+- `#5E7A8A` accent (dusty blue)  
+- Georgia serif (approximates Fraunces web font)
+- Uppercase Syne-style nav labels
 
-2. Start the app
+## Screens
 
-   ```bash
-   npx expo start
-   ```
+- **Today** — Daily quote, stats, compose new entry, recent entries
+- **Archive** — All entries with full-text search + tag filtering, long-press to delete
+- **Profile** — Stats overview, 30-day activity grid, tag distribution bar chart, editable username
 
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Setup
 
 ```bash
-npm run reset-project
+# Install dependencies
+npm install
+
+# Start Expo dev server
+npx expo start
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Then press `i` for iOS simulator, `a` for Android, or `w` for web.
 
-## Learn more
+## Features
 
-To learn more about developing your project with Expo, look at the following resources:
+- Persistent storage via AsyncStorage (survives app restarts)
+- Tag pills: life · gratitude · nature · honesty · reflection
+- Daily rotating quote
+- Character counter
+- Streak tracking
+- 30-day activity heatmap
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Project Structure
 
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```
+murmur/
+├── App.tsx                    # Root — nav tabs + screen routing
+├── app.json                   # Expo config
+├── package.json
+├── constants/
+│   ├── theme.ts               # Colors, spacing (mirrors murmur.css :root vars)
+│   └── data.ts                # Quotes, tags, date helpers
+├── hooks/
+│   └── useThoughts.ts         # AsyncStorage persistence, CRUD
+└── components/
+    ├── DashboardScreen.tsx    # Today tab
+    ├── ArchiveScreen.tsx      # Archive tab
+    └── ProfileScreen.tsx      # Profile tab
+```

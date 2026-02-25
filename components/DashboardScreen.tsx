@@ -1,10 +1,10 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useContext } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView, Image,
   StyleSheet, KeyboardAvoidingView, Platform, Alert, Animated,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { colors } from '../constants/theme';
+import { ThemeContext } from '../context/ThemeContext';
 import { TAGS, getDailyQuote } from '../constants/data';
 import { Thought, UserStats } from '../hooks/useThoughts';
 import { EMOTIONS } from '../hooks/useEmotions';
@@ -27,6 +27,7 @@ export default function DashboardScreen({
   todayEmotions, onToggleEmotion, onConfirmSave, emotionsSaved,
   todayPhoto, onSavePhoto, onRemovePhoto,
 }: Props) {
+  const { colors } = useContext(ThemeContext);
   const [body, setBody] = useState('');
   const [activeTag, setActiveTag] = useState('');
   const [saving, setSaving] = useState(false);
@@ -105,7 +106,7 @@ export default function DashboardScreen({
   });
 
   return (
-    <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    <KeyboardAvoidingView style={[styles.root, { backgroundColor: colors.bg }]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
@@ -114,51 +115,59 @@ export default function DashboardScreen({
       >
         <Animated.View style={{ opacity: fadeAnim }}>
 
-          <Text style={styles.date}>{today}</Text>
+          <Text style={[styles.date, { color: colors.border2 }]}>{today}</Text>
 
-          <Text style={styles.title}>
-            What are{'\n'}you <Text style={styles.titleEm}>thinking?</Text>
+          <Text style={[styles.title, { color: colors.bright }]}>
+            What are{'\n'}you <Text style={[styles.titleEm, { color: colors.accent }]}>thinking?</Text>
           </Text>
 
-          <View style={styles.quoteWrap}>
-            <View style={styles.quoteBorder} />
-            <Text style={styles.quote}>"{quote}"</Text>
+          <View style={[styles.quoteWrap, { borderBottomColor: colors.border }]}>
+            <View style={[styles.quoteBorder, { backgroundColor: colors.accent }]} />
+            <Text style={[styles.quote, { color: colors.border2 }]}>"{quote}"</Text>
           </View>
 
           <View style={styles.statsRow}>
             <View style={styles.stat}>
-              <Text style={[styles.statNum, styles.accentNum]}>{user.streak}</Text>
-              <Text style={styles.statLabel}>Streak</Text>
+              <Text style={[styles.statNum, { color: colors.accent }]}>{user.streak}</Text>
+              <Text style={[styles.statLabel, { color: colors.border2 }]}>Streak</Text>
             </View>
             <View style={styles.stat}>
-              <Text style={styles.statNum}>{user.thoughtsToday}</Text>
-              <Text style={styles.statLabel}>Today</Text>
+              <Text style={[styles.statNum, { color: colors.bright }]}>{user.thoughtsToday}</Text>
+              <Text style={[styles.statLabel, { color: colors.border2 }]}>Today</Text>
             </View>
             <View style={styles.stat}>
-              <Text style={styles.statNum}>{user.thoughtsTotal}</Text>
-              <Text style={styles.statLabel}>Total</Text>
+              <Text style={[styles.statNum, { color: colors.bright }]}>{user.thoughtsTotal}</Text>
+              <Text style={[styles.statLabel, { color: colors.border2 }]}>Total</Text>
             </View>
           </View>
 
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
-          {/* Write */}
+          {/* Tag pills */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false}
             style={styles.tagScroll} contentContainerStyle={styles.tagContainer}>
             {TAGS.map((tag) => (
               <TouchableOpacity
                 key={tag}
-                style={[styles.tagPill, activeTag === tag && styles.tagPillActive]}
+                style={[
+                  styles.tagPill,
+                  { borderColor: colors.border, backgroundColor: colors.bg },
+                  activeTag === tag && { borderColor: colors.accent },
+                ]}
                 onPress={() => setActiveTag(activeTag === tag ? '' : tag)}
                 activeOpacity={0.7}
               >
-                <Text style={[styles.tagText, activeTag === tag && styles.tagTextActive]}>{tag}</Text>
+                <Text style={[
+                  styles.tagText,
+                  { color: colors.border2 },
+                  activeTag === tag && { color: colors.accent },
+                ]}>{tag}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
 
           <TextInput
-            style={styles.textarea}
+            style={[styles.textarea, { color: colors.text }]}
             multiline
             placeholder="Begin anywhere. There's no wrong way in…"
             placeholderTextColor={colors.border2}
@@ -166,26 +175,32 @@ export default function DashboardScreen({
             onChangeText={setBody}
             textAlignVertical="top"
           />
-          <View style={styles.textareaBorder} />
+          <View style={[styles.textareaBorder, { backgroundColor: colors.border }]} />
 
           <View style={styles.composeFooter}>
             <TouchableOpacity
-              style={[styles.saveBtn, (!body.trim() || saving) && styles.saveBtnDisabled]}
+              style={[
+                styles.saveBtn,
+                { backgroundColor: colors.accent },
+                (!body.trim() || saving) && { backgroundColor: colors.border2 },
+              ]}
               onPress={handleSave}
               disabled={saving || !body.trim()}
               activeOpacity={0.8}
             >
-              <Text style={styles.saveBtnText}>{saving ? 'Saving…' : 'Save entry'}</Text>
+              <Text style={[styles.saveBtnText, { color: colors.white }]}>
+                {saving ? 'Saving…' : 'Save entry'}
+              </Text>
             </TouchableOpacity>
-            <Text style={styles.charCount}>{body.length} / ∞</Text>
+            <Text style={[styles.charCount, { color: colors.border2 }]}>{body.length} / ∞</Text>
           </View>
 
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
           {/* Emotion tracker */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              How are you <Text style={styles.sectionTitleEm}>feeling?</Text>
+            <Text style={[styles.sectionTitle, { color: colors.bright }]}>
+              How are you <Text style={[styles.sectionTitleEm, { color: colors.accent }]}>feeling?</Text>
             </Text>
             <View style={styles.emotionGrid}>
               {EMOTIONS.map((e) => {
@@ -193,12 +208,20 @@ export default function DashboardScreen({
                 return (
                   <TouchableOpacity
                     key={e.id}
-                    style={[styles.emotionPill, active && styles.emotionPillActive]}
+                    style={[
+                      styles.emotionPill,
+                      { borderColor: colors.border, backgroundColor: colors.bg },
+                      active && { borderColor: colors.accent },
+                    ]}
                     onPress={() => onToggleEmotion(e.id)}
                     activeOpacity={0.7}
                   >
                     <Text style={styles.emotionEmoji}>{e.emoji}</Text>
-                    <Text style={[styles.emotionLabel, active && styles.emotionLabelActive]}>
+                    <Text style={[
+                      styles.emotionLabel,
+                      { color: colors.muted },
+                      active && { color: colors.accentD },
+                    ]}>
                       {e.label}
                     </Text>
                   </TouchableOpacity>
@@ -208,14 +231,14 @@ export default function DashboardScreen({
             {(todayEmotions ?? []).length > 0 && (
               <View style={styles.emotionFooter}>
                 {emotionsSaved ? (
-                  <Text style={styles.savedConfirm}>✓ Saved for today</Text>
+                  <Text style={[styles.savedConfirm, { color: colors.accent }]}>✓ Saved for today</Text>
                 ) : (
                   <TouchableOpacity
-                    style={styles.doneBtn}
+                    style={[styles.doneBtn, { borderColor: colors.accent }]}
                     onPress={() => onConfirmSave(todayEmotions)}
                     activeOpacity={0.8}
                   >
-                    <Text style={styles.doneBtnText}>
+                    <Text style={[styles.doneBtnText, { color: colors.accent }]}>
                       Done — save {todayEmotions.length} feeling{todayEmotions.length > 1 ? 's' : ''}
                     </Text>
                   </TouchableOpacity>
@@ -224,24 +247,28 @@ export default function DashboardScreen({
             )}
           </View>
 
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
           {/* Photo */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              Today's <Text style={styles.sectionTitleEm}>moment.</Text>
+            <Text style={[styles.sectionTitle, { color: colors.bright }]}>
+              Today's <Text style={[styles.sectionTitleEm, { color: colors.accent }]}>moment.</Text>
             </Text>
 
             {todayPhoto ? (
               <TouchableOpacity onPress={handlePhotoPress} activeOpacity={0.9}>
                 <Image source={{ uri: todayPhoto }} style={styles.photo} resizeMode="cover" />
-                <Text style={styles.photoHint}>Tap to replace or remove</Text>
+                <Text style={[styles.photoHint, { color: colors.border2 }]}>Tap to replace or remove</Text>
               </TouchableOpacity>
             ) : (
-              <TouchableOpacity style={styles.photoPlaceholder} onPress={handlePhotoPress} activeOpacity={0.7}>
-                <Text style={styles.photoPlaceholderIcon}>◻</Text>
-                <Text style={styles.photoPlaceholderText}>Add a photo to today's log</Text>
-                <Text style={styles.photoPlaceholderHint}>camera or library</Text>
+              <TouchableOpacity
+                style={[styles.photoPlaceholder, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                onPress={handlePhotoPress}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.photoPlaceholderIcon, { color: colors.border2 }]}>◻</Text>
+                <Text style={[styles.photoPlaceholderText, { color: colors.muted }]}>Add a photo to today's log</Text>
+                <Text style={[styles.photoPlaceholderHint, { color: colors.border2 }]}>camera or library</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -253,77 +280,70 @@ export default function DashboardScreen({
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
+  root: { flex: 1 },
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: 28, paddingTop: 16, paddingBottom: 60 },
 
   date: {
     fontFamily: 'System', fontSize: 9, fontWeight: '600',
-    letterSpacing: 1.4, textTransform: 'uppercase', color: colors.border2, marginBottom: 22,
+    letterSpacing: 1.4, textTransform: 'uppercase', marginBottom: 22,
   },
   title: {
     fontFamily: 'Georgia', fontSize: 36, fontWeight: '300',
-    lineHeight: 40, color: colors.bright, letterSpacing: -0.8, marginBottom: 26,
+    lineHeight: 40, letterSpacing: -0.8, marginBottom: 26,
   },
-  titleEm: { fontStyle: 'italic', color: colors.accent },
+  titleEm: { fontStyle: 'italic' },
 
   quoteWrap: {
     flexDirection: 'row', gap: 14, marginBottom: 28,
-    paddingBottom: 28, borderBottomWidth: 1, borderBottomColor: '#ECEAE4',
+    paddingBottom: 28, borderBottomWidth: 1,
   },
-  quoteBorder: { width: 1, backgroundColor: colors.accent },
-  quote: { flex: 1, fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 13, color: colors.border2, lineHeight: 22 },
+  quoteBorder: { width: 1 },
+  quote: { flex: 1, fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 13, lineHeight: 22 },
 
   statsRow: { flexDirection: 'row', gap: 24, marginBottom: 28 },
   stat: {},
-  statNum: { fontFamily: 'Georgia', fontSize: 30, fontWeight: '300', color: colors.bright, lineHeight: 34, marginBottom: 2 },
-  accentNum: { color: colors.accent },
-  statLabel: { fontFamily: 'System', fontSize: 8, fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase', color: colors.border2 },
+  statNum: { fontFamily: 'Georgia', fontSize: 30, fontWeight: '300', lineHeight: 34, marginBottom: 2 },
+  statLabel: { fontFamily: 'System', fontSize: 8, fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase' },
 
-  divider: { height: 1, backgroundColor: '#ECEAE4', marginBottom: 24 },
+  divider: { height: 1, marginBottom: 24 },
 
   tagScroll: { marginBottom: 16 },
   tagContainer: { gap: 18, paddingRight: 4 },
-  tagPill: { paddingVertical: 7, paddingHorizontal: 7, borderColor: '#ECEAE4', borderWidth: 1, backgroundColor: colors.bg },
-  tagPillActive: { borderColor: colors.accent },
-  tagText: { fontFamily: 'System', fontSize: 9, fontWeight: '600', letterSpacing: 0.9, textTransform: 'uppercase', color: colors.border2 },
-  tagTextActive: { color: colors.accent },
+  tagPill: { paddingVertical: 7, paddingHorizontal: 7, borderWidth: 1 },
+  tagText: { fontFamily: 'System', fontSize: 9, fontWeight: '600', letterSpacing: 0.9, textTransform: 'uppercase' },
 
-  textarea: { backgroundColor: 'transparent', padding: 0, fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 16, color: colors.text, lineHeight: 28, minHeight: 140, marginBottom: 12 },
-  textareaBorder: { height: 1, backgroundColor: '#ECEAE4', marginBottom: 16 },
+  textarea: { backgroundColor: 'transparent', padding: 0, fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 16, lineHeight: 28, minHeight: 140, marginBottom: 12 },
+  textareaBorder: { height: 1, marginBottom: 16 },
 
   composeFooter: { flexDirection: 'row', alignItems: 'center', marginBottom: 28 },
-  saveBtn: { backgroundColor: colors.accent, paddingHorizontal: 22, paddingVertical: 12 },
-  saveBtnDisabled: { backgroundColor: colors.border2 },
-  saveBtnText: { fontFamily: 'System', fontSize: 10, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', color: '#fff' },
-  charCount: { marginLeft: 'auto', fontSize: 11, color: colors.border2, fontFamily: 'System' },
+  saveBtn: { paddingHorizontal: 22, paddingVertical: 12 },
+  saveBtnText: { fontFamily: 'System', fontSize: 10, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' },
+  charCount: { marginLeft: 'auto', fontSize: 11, fontFamily: 'System' },
 
   section: { marginBottom: 8 },
-  sectionTitle: { fontFamily: 'Georgia', fontSize: 20, fontWeight: '300', color: colors.bright, letterSpacing: -0.3, marginBottom: 18 },
-  sectionTitleEm: { fontStyle: 'italic', color: colors.accent },
+  sectionTitle: { fontFamily: 'Georgia', fontSize: 20, fontWeight: '300', letterSpacing: -0.3, marginBottom: 18 },
+  sectionTitleEm: { fontStyle: 'italic' },
 
   emotionGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 },
-  emotionPill: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 7, paddingHorizontal: 12, borderWidth: 1, borderColor: '#ECEAE4', backgroundColor: colors.bg },
-  emotionPillActive: { borderColor: colors.accent },
+  emotionPill: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 7, paddingHorizontal: 12, borderWidth: 1 },
   emotionEmoji: { fontSize: 13 },
-  emotionLabel: { fontFamily: 'System', fontSize: 10, fontWeight: '500', color: colors.muted },
-  emotionLabelActive: { color: colors.accentD },
+  emotionLabel: { fontFamily: 'System', fontSize: 10, fontWeight: '500' },
 
   emotionFooter: { alignItems: 'flex-start' },
-  doneBtn: { borderWidth: 1, borderColor: colors.accent, paddingHorizontal: 18, paddingVertical: 10 },
-  doneBtnText: { fontFamily: 'System', fontSize: 10, fontWeight: '600', letterSpacing: 0.8, textTransform: 'uppercase', color: colors.accent },
-  savedConfirm: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 13, color: colors.accent },
+  doneBtn: { borderWidth: 1, paddingHorizontal: 18, paddingVertical: 10 },
+  doneBtnText: { fontFamily: 'System', fontSize: 10, fontWeight: '600', letterSpacing: 0.8, textTransform: 'uppercase' },
+  savedConfirm: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 13 },
 
   photo: { width: '100%', height: 220, marginBottom: 8 },
-  photoHint: { fontFamily: 'System', fontSize: 9, fontStyle: 'italic', color: colors.border2, marginBottom: 4 },
+  photoHint: { fontFamily: 'System', fontSize: 9, fontStyle: 'italic', marginBottom: 4 },
 
   photoPlaceholder: {
     width: '100%', height: 160,
-    borderWidth: 1, borderColor: '#ECEAE4', borderStyle: 'dashed',
+    borderWidth: 1, borderStyle: 'dashed',
     alignItems: 'center', justifyContent: 'center', gap: 6,
-    backgroundColor: colors.surface,
   },
-  photoPlaceholderIcon: { fontSize: 28, color: colors.border },
-  photoPlaceholderText: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 14, color: colors.muted },
-  photoPlaceholderHint: { fontFamily: 'System', fontSize: 9, letterSpacing: 0.8, textTransform: 'uppercase', color: colors.border2 },
+  photoPlaceholderIcon: { fontSize: 28 },
+  photoPlaceholderText: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 14 },
+  photoPlaceholderHint: { fontFamily: 'System', fontSize: 9, letterSpacing: 0.8, textTransform: 'uppercase' },
 });

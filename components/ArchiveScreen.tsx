@@ -1,9 +1,9 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useContext } from 'react';
 import {
   View, Text, TouchableOpacity, ScrollView, StyleSheet,
   Modal, Alert, Dimensions, Image, Animated,
 } from 'react-native';
-import { colors } from '../constants/theme';
+import { ThemeContext } from '../context/ThemeContext';
 import { EMOTIONS, EmotionEntry } from '../hooks/useEmotions';
 import { Thought, UserStats } from '../hooks/useThoughts';
 import { formatDate } from '../constants/data';
@@ -26,8 +26,8 @@ function friendlyDate(str: string) {
   return d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
 }
 
-export default function ArchiveScreen({ thoughts, user, emotionHistory, onDelete, getPhotoForDate }
-  : Props) {
+export default function ArchiveScreen({ thoughts, user, emotionHistory, onDelete, getPhotoForDate }: Props) {
+  const { colors } = useContext(ThemeContext);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const today = new Date();
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -47,7 +47,6 @@ export default function ArchiveScreen({ thoughts, user, emotionHistory, onDelete
       .filter(e => e.count > 0)
       .sort((a, b) => b.count - a.count);
   }, [emotionHistory]);
-  
 
   const maxEmotionCount = Math.max(...last7Emotions.map(e => e.count), 1);
 
@@ -110,47 +109,56 @@ export default function ArchiveScreen({ thoughts, user, emotionHistory, onDelete
   const DOW = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-      
+    <ScrollView
+      style={[styles.root, { backgroundColor: colors.bg }]}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+    >
       <Animated.View style={{ opacity: fadeAnim }}>
 
-        <Text style={styles.pageTitle}><Text style={styles.pageTitleEm}>{user.username}</Text></Text>
-        <Text style={styles.pageSubtitle}>your story, in numbers</Text>
+        <Text style={[styles.pageTitle, { color: colors.bright }]}>
+          <Text style={[styles.pageTitleEm, { color: colors.accent }]}>{user.username}</Text>
+        </Text>
+        <Text style={[styles.pageSubtitle, { color: colors.border2 }]}>your story, in numbers</Text>
 
-        <View style={styles.divider} />
+        <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
-        {/* Bar chart */}
+        {/* Emotion bar chart */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            Most felt <Text style={styles.sectionTitleEm}>this week</Text>
+          <Text style={[styles.sectionTitle, { color: colors.bright }]}>
+            Most felt <Text style={[styles.sectionTitleEm, { color: colors.accent }]}>this week</Text>
           </Text>
           {last7Emotions.length === 0 ? (
-            <Text style={styles.emptyText}>No emotions logged this week yet.</Text>
+            <Text style={[styles.emptyText, { color: colors.border2 }]}>No emotions logged this week yet.</Text>
           ) : (
             <View style={styles.barChart}>
               {last7Emotions.map(e => (
                 <View key={e.id} style={styles.barRow}>
                   <Text style={styles.barEmoji}>{e.emoji}</Text>
-                  <View style={styles.barTrack}>
-                    <View style={[styles.barFill, { width: `${(e.count / maxEmotionCount) * 100}%` }]} />
+                  <View style={[styles.barTrack, { backgroundColor: colors.surface2 }]}>
+                    <View style={[styles.barFill, { backgroundColor: colors.accent, width: `${(e.count / maxEmotionCount) * 100}%` }]} />
                   </View>
-                  <Text style={styles.barLabel}>{e.label}</Text>
-                  <Text style={styles.barCount}>{e.count}×</Text>
+                  <Text style={[styles.barLabel, { color: colors.muted }]}>{e.label}</Text>
+                  <Text style={[styles.barCount, { color: colors.border2 }]}>{e.count}×</Text>
                 </View>
               ))}
             </View>
           )}
         </View>
 
-        <View style={styles.divider} />
+        <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
         {/* Calendar */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Your <Text style={styles.sectionTitleEm}>days</Text></Text>
-          <Text style={styles.calendarHint}>Tap a day to see its log</Text>
+          <Text style={[styles.sectionTitle, { color: colors.bright }]}>
+            Your <Text style={[styles.sectionTitleEm, { color: colors.accent }]}>days</Text>
+          </Text>
+          <Text style={[styles.calendarHint, { color: colors.border2 }]}>Tap a day to see its log</Text>
 
           <View style={styles.dowRow}>
-            {DOW.map((d, i) => <Text key={i} style={styles.dowLabel}>{d}</Text>)}
+            {DOW.map((d, i) => (
+              <Text key={i} style={[styles.dowLabel, { color: colors.border2 }]}>{d}</Text>
+            ))}
           </View>
 
           <View style={styles.calGrid}>
@@ -165,11 +173,20 @@ export default function ArchiveScreen({ thoughts, user, emotionHistory, onDelete
               return (
                 <TouchableOpacity
                   key={i}
-                  style={[styles.calCell, hasData && styles.calCellActive, isToday && styles.calCellToday]}
+                  style={[
+                    styles.calCell,
+                    { borderColor: colors.border, backgroundColor: colors.bg },
+                    hasData && { backgroundColor: colors.surface, borderColor: colors.border2 },
+                    isToday && { borderColor: colors.accent },
+                  ]}
                   onPress={() => setSelectedDay(d)}
                   activeOpacity={0.7}
                 >
-                  <Text style={[styles.calDayNum, isToday && styles.calDayNumToday]}>
+                  <Text style={[
+                    styles.calDayNum,
+                    { color: colors.muted },
+                    isToday && { color: colors.accent, fontWeight: '700' },
+                  ]}>
                     {parseInt(d.split('-')[2])}
                   </Text>
                   {emoji ? (
@@ -177,7 +194,7 @@ export default function ArchiveScreen({ thoughts, user, emotionHistory, onDelete
                   ) : hasPhoto ? (
                     <Text style={styles.calEmoji}>📷</Text>
                   ) : thoughtCount > 0 ? (
-                    <View style={styles.calDot} />
+                    <View style={[styles.calDot, { backgroundColor: colors.accent }]} />
                   ) : null}
                 </TouchableOpacity>
               );
@@ -192,15 +209,20 @@ export default function ArchiveScreen({ thoughts, user, emotionHistory, onDelete
           presentationStyle="pageSheet"
           onRequestClose={() => setSelectedDay(null)}
         >
-          <ScrollView style={styles.modal} contentContainerStyle={styles.modalContent}>
+          <ScrollView
+            style={[styles.modal, { backgroundColor: colors.bg }]}
+            contentContainerStyle={styles.modalContent}
+          >
             <View style={styles.modalHeader}>
-              <Text style={styles.modalDate}>{selectedDay ? friendlyDate(selectedDay) : ''}</Text>
+              <Text style={[styles.modalDate, { color: colors.bright }]}>
+                {selectedDay ? friendlyDate(selectedDay) : ''}
+              </Text>
               <TouchableOpacity onPress={() => setSelectedDay(null)}>
-                <Text style={styles.modalClose}>Close</Text>
+                <Text style={[styles.modalClose, { color: colors.muted }]}>Close</Text>
               </TouchableOpacity>
             </View>
 
-            <View style={styles.divider} />
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
             {/* Photo */}
             {selectedPhoto && (
@@ -208,129 +230,127 @@ export default function ArchiveScreen({ thoughts, user, emotionHistory, onDelete
                 <View style={styles.modalSection}>
                   <Image source={{ uri: selectedPhoto }} style={styles.modalPhoto} resizeMode="cover" />
                 </View>
-                <View style={styles.divider} />
+                <View style={[styles.divider, { backgroundColor: colors.border }]} />
               </>
             )}
 
             {/* Emotions */}
             <View style={styles.modalSection}>
-              <Text style={styles.modalSectionTitle}>
-                Feelings <Text style={styles.modalSectionEm}>that day</Text>
+              <Text style={[styles.modalSectionTitle, { color: colors.bright }]}>
+                Feelings <Text style={[styles.modalSectionEm, { color: colors.accent }]}>that day</Text>
               </Text>
               {selectedEmotionDetails.length === 0 ? (
-                <Text style={styles.modalEmpty}>No emotions logged.</Text>
+                <Text style={[styles.modalEmpty, { color: colors.border2 }]}>No emotions logged.</Text>
               ) : (
                 <View style={styles.emotionRow}>
                   {selectedEmotionDetails.map(e => (
-                    <View key={e.id} style={styles.emotionChip}>
+                    <View key={e.id} style={[styles.emotionChip, { borderColor: colors.accent, backgroundColor: colors.accentL }]}>
                       <Text style={styles.emotionChipEmoji}>{e.emoji}</Text>
-                      <Text style={styles.emotionChipLabel}>{e.label}</Text>
+                      <Text style={[styles.emotionChipLabel, { color: colors.accentD }]}>{e.label}</Text>
                     </View>
                   ))}
                 </View>
               )}
             </View>
 
-            <View style={styles.divider} />
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
             {/* Thoughts */}
             <View style={styles.modalSection}>
-              <Text style={styles.modalSectionTitle}>
+              <Text style={[styles.modalSectionTitle, { color: colors.bright }]}>
                 {selectedThoughts.length}{' '}
-                <Text style={styles.modalSectionEm}>
+                <Text style={[styles.modalSectionEm, { color: colors.accent }]}>
                   {selectedThoughts.length === 1 ? 'thought' : 'thoughts'}
                 </Text>
               </Text>
               {selectedThoughts.length === 0 ? (
-                <Text style={styles.modalEmpty}>No entries written.</Text>
+                <Text style={[styles.modalEmpty, { color: colors.border2 }]}>No entries written.</Text>
               ) : (
                 selectedThoughts.map(t => (
                   <TouchableOpacity
                     key={t.id}
-                    style={styles.thoughtEntry}
+                    style={[styles.thoughtEntry, { borderTopColor: colors.border }]}
                     onLongPress={() => confirmDelete(t.id)}
                     activeOpacity={0.7}
                   >
                     <View style={styles.thoughtMeta}>
-                      <Text style={styles.thoughtTime}>
+                      <Text style={[styles.thoughtTime, { color: colors.border2 }]}>
                         {new Date(t.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
                       </Text>
-                      {t.tag ? <Text style={styles.thoughtTag}>{t.tag}</Text> : null}
+                      {t.tag ? <Text style={[styles.thoughtTag, { color: colors.accent }]}>{t.tag}</Text> : null}
                     </View>
-                    <Text style={styles.thoughtBody}>{t.body}</Text>
+                    <Text style={[styles.thoughtBody, { color: colors.text }]}>{t.body}</Text>
                   </TouchableOpacity>
                 ))
               )}
             </View>
 
             {selectedThoughts.length > 0 && (
-              <Text style={styles.deleteHint}>Long-press a thought to delete</Text>
+              <Text style={[styles.deleteHint, { color: colors.border }]}>Long-press a thought to delete</Text>
             )}
           </ScrollView>
         </Modal>
+
       </Animated.View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
+  root: { flex: 1 },
   scrollContent: { paddingHorizontal: 28, paddingTop: 16, paddingBottom: 60 },
 
-  pageTitle: { fontFamily: 'Georgia', fontSize: 32, fontWeight: '300', color: colors.bright, letterSpacing: -0.5, marginBottom: 4 },
-  pageTitleEm: { fontStyle: 'italic', color: colors.accent },
-  pageSubtitle: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 13, color: colors.border2, marginBottom: 20 },
+  pageTitle: { fontFamily: 'Georgia', fontSize: 32, fontWeight: '300', letterSpacing: -0.5, marginBottom: 4 },
+  pageTitleEm: { fontStyle: 'italic' },
+  pageSubtitle: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 13, marginBottom: 20 },
 
-  divider: { height: 1, backgroundColor: '#ECEAE4', marginVertical: 24 },
+  divider: { height: 1, marginVertical: 24 },
 
   section: { marginBottom: 0 },
-  sectionTitle: { fontFamily: 'Georgia', fontSize: 20, fontWeight: '300', color: colors.bright, letterSpacing: -0.3, marginBottom: 18 },
-  sectionTitleEm: { fontStyle: 'italic', color: colors.accent },
-  emptyText: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 13, color: colors.border2 },
+  sectionTitle: { fontFamily: 'Georgia', fontSize: 20, fontWeight: '300', letterSpacing: -0.3, marginBottom: 18 },
+  sectionTitleEm: { fontStyle: 'italic' },
+  emptyText: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 13 },
 
   barChart: { gap: 12 },
   barRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   barEmoji: { fontSize: 15, width: 22 },
-  barTrack: { flex: 1, height: 6, backgroundColor: '#ECEAE4', borderRadius: 3, overflow: 'hidden' },
-  barFill: { height: '100%', backgroundColor: colors.accent, borderRadius: 3 },
-  barLabel: { fontFamily: 'System', fontSize: 10, fontWeight: '500', color: colors.muted, width: 68 },
-  barCount: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 12, color: colors.border2, width: 20, textAlign: 'right' },
+  barTrack: { flex: 1, height: 6, borderRadius: 3, overflow: 'hidden' },
+  barFill: { height: '100%', borderRadius: 3 },
+  barLabel: { fontFamily: 'System', fontSize: 10, fontWeight: '500', width: 68 },
+  barCount: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 12, width: 20, textAlign: 'right' },
 
-  calendarHint: { fontFamily: 'System', fontSize: 9, color: colors.border2, fontStyle: 'italic', marginTop: -10, marginBottom: 16 },
+  calendarHint: { fontFamily: 'System', fontSize: 9, fontStyle: 'italic', marginTop: -10, marginBottom: 16 },
   dowRow: { flexDirection: 'row', gap: 4, marginBottom: 6 },
-  dowLabel: { width: DAY_SIZE, textAlign: 'center', fontFamily: 'System', fontSize: 9, fontWeight: '600', letterSpacing: 0.5, color: colors.border2 },
+  dowLabel: { width: DAY_SIZE, textAlign: 'center', fontFamily: 'System', fontSize: 9, fontWeight: '600', letterSpacing: 0.5 },
   calGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
-  calCell: { width: DAY_SIZE, height: DAY_SIZE, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#ECEAE4', backgroundColor: colors.bg },
-  calCellActive: { backgroundColor: colors.surface, borderColor: colors.border },
-  calCellToday: { borderColor: colors.accent },
-  calDayNum: { fontFamily: 'System', fontSize: 10, fontWeight: '500', color: colors.muted },
-  calDayNumToday: { color: colors.accent, fontWeight: '700' },
+  calCell: { width: DAY_SIZE, height: DAY_SIZE, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  calDayNum: { fontFamily: 'System', fontSize: 10, fontWeight: '500' },
   calEmoji: { fontSize: 10, marginTop: 1 },
-  calDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: colors.accent, marginTop: 1 },
+  calDot: { width: 4, height: 4, borderRadius: 2, marginTop: 1 },
 
-  modal: { flex: 1, backgroundColor: colors.bg },
+  modal: { flex: 1 },
   modalContent: { paddingHorizontal: 28, paddingTop: 28, paddingBottom: 60 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 },
-  modalDate: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 22, fontWeight: '300', color: colors.bright, flex: 1, letterSpacing: -0.3, lineHeight: 28 },
-  modalClose: { fontFamily: 'System', fontSize: 10, fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase', color: colors.muted, paddingTop: 4 },
+  modalDate: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 22, fontWeight: '300', flex: 1, letterSpacing: -0.3, lineHeight: 28 },
+  modalClose: { fontFamily: 'System', fontSize: 10, fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase', paddingTop: 4 },
 
   modalPhoto: { width: '100%', height: 220, marginBottom: 4 },
 
   modalSection: { marginBottom: 0 },
-  modalSectionTitle: { fontFamily: 'Georgia', fontSize: 18, fontWeight: '300', color: colors.bright, marginBottom: 16 },
-  modalSectionEm: { fontStyle: 'italic', color: colors.accent },
-  modalEmpty: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 13, color: colors.border2 },
+  modalSectionTitle: { fontFamily: 'Georgia', fontSize: 18, fontWeight: '300', marginBottom: 16 },
+  modalSectionEm: { fontStyle: 'italic' },
+  modalEmpty: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 13 },
 
   emotionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  emotionChip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 6, paddingHorizontal: 11, borderWidth: 1, borderColor: colors.accent, backgroundColor: colors.accentL },
+  emotionChip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 6, paddingHorizontal: 11, borderWidth: 1 },
   emotionChipEmoji: { fontSize: 13 },
-  emotionChipLabel: { fontFamily: 'System', fontSize: 10, fontWeight: '500', color: colors.accentD },
+  emotionChipLabel: { fontFamily: 'System', fontSize: 10, fontWeight: '500' },
 
-  thoughtEntry: { paddingVertical: 16, borderTopWidth: 1, borderTopColor: '#ECEAE4' },
+  thoughtEntry: { paddingVertical: 16, borderTopWidth: 1 },
   thoughtMeta: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 7 },
-  thoughtTime: { fontFamily: 'System', fontSize: 9, fontWeight: '600', letterSpacing: 0.9, textTransform: 'uppercase', color: colors.border2 },
-  thoughtTag: { fontFamily: 'System', fontSize: 9, fontWeight: '600', letterSpacing: 0.8, textTransform: 'uppercase', color: colors.accent },
-  thoughtBody: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 15, color: colors.text, lineHeight: 25 },
+  thoughtTime: { fontFamily: 'System', fontSize: 9, fontWeight: '600', letterSpacing: 0.9, textTransform: 'uppercase' },
+  thoughtTag: { fontFamily: 'System', fontSize: 9, fontWeight: '600', letterSpacing: 0.8, textTransform: 'uppercase' },
+  thoughtBody: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 15, lineHeight: 25 },
 
-  deleteHint: { fontFamily: 'System', fontSize: 9, fontStyle: 'italic', color: colors.border, textAlign: 'center', marginTop: 20 },
+  deleteHint: { fontFamily: 'System', fontSize: 9, fontStyle: 'italic', textAlign: 'center', marginTop: 20 },
 });

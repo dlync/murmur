@@ -1,16 +1,17 @@
 import React, { useState, useMemo, useEffect, useRef, useContext } from 'react';
 import {
   View, Text, TouchableOpacity, ScrollView, StyleSheet,
-  Modal, Alert, Dimensions, Image, Animated,
+  Modal, Alert, Dimensions, Image, Animated, TextInput,
+  KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { ThemeContext } from '../context/ThemeContext';
 import { EMOTIONS, EmotionEntry } from '../hooks/useEmotions';
 import { HABITS, HabitEntry } from '../hooks/useHabits';
+import { CalendarEvent } from '../hooks/useEvents';
 import { Thought, UserStats } from '../hooks/useThoughts';
-import { formatDate } from '../constants/data';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const DAY_SIZE = Math.floor((SCREEN_WIDTH - 56 - 24) / 7);
+const DAY_SIZE = Math.floor((SCREEN_WIDTH - 56 - 20) / 7);
 
 interface Props {
   thoughts: Thought[];
@@ -19,6 +20,10 @@ interface Props {
   habitHistory: HabitEntry[];
   onDelete: (id: string) => void;
   getPhotoForDate: (date: string) => string | null;
+  events: CalendarEvent[];
+  onAddEvent: (date: string, title: string, note?: string) => Promise<CalendarEvent>;
+  onDeleteEvent: (id: string) => Promise<void>;
+  onUpdateEvent: (id: string, title: string, note?: string) => Promise<void>;
 }
 
 function dateStr(d: Date) { return d.toISOString().split('T')[0]; }
@@ -26,16 +31,67 @@ function friendlyDate(str: string) {
   const d = new Date(str + 'T12:00:00');
   return d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
 }
+function isFuture(str: string) { return str > dateStr(new Date()); }
+function isTodayOrFuture(str: string) { return str >= dateStr(new Date()); }
 
-export default function ArchiveScreen({ thoughts, user, emotionHistory, habitHistory, onDelete, getPhotoForDate }: Props) {
+// Build a grid for a given year/month — returns array of date strings or null (padding)
+function buildMonthGrid(year: number, month: number): (string | null)[] {
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  // Mon=0 … Sun=6
+  const startOffset = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1;
+  const grid: (string | null)[] = Array(startOffset).fill(null);
+  for (let d = 1; d <= lastDay.getDate(); d++) {
+    const date = new Date(year, month, d);
+    grid.push(dateStr(date));
+  }
+  // pad to complete last row
+  while (grid.length % 7 !== 0) grid.push(null);
+  return grid;
+}
+
+const MONTH_NAMES = [
+  'January','February','March','April','May','June',
+  'July','August','September','October','November','December',
+];
+const DOW = ['M','T','W','T','F','S','S'];
+
+export default function ArchiveScreen({
+  events = [], thoughts, user, emotionHistory, habitHistory, onDelete,
+  getPhotoForDate, onAddEvent, onDeleteEvent, onUpdateEvent,
+}: Props) {
   const { colors } = useContext(ThemeContext);
-  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+
+  function hasEventOnDate(date: string) { return (events ?? []).some(e => e.date === date); }
+  function getEventsForDate(date: string) { return (events ?? []).filter(e => e.date === date); }
+
   const today = new Date();
+  const [calYear, setCalYear] = useState(today.getFullYear());
+  const [calMonth, setCalMonth] = useState(today.getMonth());
+
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [showEventForm, setShowEventForm] = useState(false);
+  const [eventTitle, setEventTitle] = useState('');
+  const [eventNote, setEventNote] = useState('');
+  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start();
   }, []);
+
+  function prevMonth() {
+    if (calMonth === 0) { setCalYear(y => y - 1); setCalMonth(11); }
+    else setCalMonth(m => m - 1);
+  }
+  function nextMonth() {
+    if (calMonth === 11) { setCalYear(y => y + 1); setCalMonth(0); }
+    else setCalMonth(m => m + 1);
+  }
+  function goToday() { setCalYear(today.getFullYear()); setCalMonth(today.getMonth()); }
+
+  const isCurrentMonth = calYear === today.getFullYear() && calMonth === today.getMonth();
+  const calGrid = useMemo(() => buildMonthGrid(calYear, calMonth), [calYear, calMonth]);
 
   const last7Emotions = useMemo(() => {
     const cutoff = new Date(today);
@@ -50,21 +106,6 @@ export default function ArchiveScreen({ thoughts, user, emotionHistory, habitHis
   }, [emotionHistory]);
 
   const maxEmotionCount = Math.max(...last7Emotions.map(e => e.count), 1);
-
-  const calendarDays = useMemo(() => {
-    const days: (string | null)[] = [];
-    const start = new Date(today);
-    start.setDate(today.getDate() - 27);
-    const dow = start.getDay() === 0 ? 6 : start.getDay() - 1;
-    start.setDate(start.getDate() - dow);
-    for (let i = 0; i < 35; i++) {
-      const d = new Date(start);
-      d.setDate(start.getDate() + i);
-      const s = dateStr(d);
-      days.push(s <= dateStr(today) ? s : null);
-    }
-    return days;
-  }, []);
 
   const emotionByDate = useMemo(() => {
     const map: Record<string, string[]> = {};
@@ -101,14 +142,55 @@ export default function ArchiveScreen({ thoughts, user, emotionHistory, habitHis
     return EMOTIONS.find(e => e.id === ids[0])?.emoji ?? null;
   }
 
-  const selectedThoughts = selectedDay ? (thoughtsByDate[selectedDay] ?? []) : [];
-  const selectedEmotions = selectedDay ? (emotionByDate[selectedDay] ?? []) : [];
-  const selectedEmotionDetails = selectedEmotions
-    .map(id => EMOTIONS.find(e => e.id === id)).filter(Boolean) as typeof EMOTIONS;
-  const selectedHabits = selectedDay ? (habitByDate[selectedDay] ?? []) : [];
-  const selectedHabitDetails = selectedHabits
-    .map(id => HABITS.find(h => h.id === id)).filter(Boolean) as typeof HABITS;
-  const selectedPhoto = selectedDay ? getPhotoForDate(selectedDay) : null;
+  function handleDayPress(d: string) {
+    setSelectedDay(d);
+    setShowEventForm(false);
+    setEventTitle('');
+    setEventNote('');
+    setEditingEvent(null);
+  }
+
+  function handleCloseDay() {
+    setSelectedDay(null);
+    setShowEventForm(false);
+    setEventTitle('');
+    setEventNote('');
+    setEditingEvent(null);
+  }
+
+  async function handleSaveEvent() {
+    if (!eventTitle.trim() || !selectedDay) return;
+    if (editingEvent) {
+      await onUpdateEvent(editingEvent.id, eventTitle, eventNote);
+    } else {
+      await onAddEvent(selectedDay, eventTitle, eventNote);
+    }
+    setEventTitle('');
+    setEventNote('');
+    setShowEventForm(false);
+    setEditingEvent(null);
+  }
+
+  function handleEditEvent(event: CalendarEvent) {
+    setEditingEvent(event);
+    setEventTitle(event.title);
+    setEventNote(event.note ?? '');
+    setShowEventForm(true);
+  }
+
+  function handleDeleteEvent(id: string) {
+    Alert.alert('Delete event', 'Remove this event?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => onDeleteEvent(id) },
+    ]);
+  }
+
+  function handleCancelEventForm() {
+    setShowEventForm(false);
+    setEventTitle('');
+    setEventNote('');
+    setEditingEvent(null);
+  }
 
   function confirmDelete(id: string) {
     Alert.alert('Delete entry', 'Are you sure?', [
@@ -117,224 +199,387 @@ export default function ArchiveScreen({ thoughts, user, emotionHistory, habitHis
     ]);
   }
 
-  const DOW = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+  const selectedIsFuture = selectedDay ? isTodayOrFuture(selectedDay) : false;
+  const selectedThoughts = selectedDay ? (thoughtsByDate[selectedDay] ?? []) : [];
+  const selectedEmotions = selectedDay ? (emotionByDate[selectedDay] ?? []) : [];
+  const selectedEmotionDetails = selectedEmotions
+    .map(id => EMOTIONS.find(e => e.id === id)).filter(Boolean) as typeof EMOTIONS;
+  const selectedHabits = selectedDay ? (habitByDate[selectedDay] ?? []) : [];
+  const selectedHabitDetails = selectedHabits
+    .map(id => HABITS.find(h => h.id === id)).filter(Boolean) as typeof HABITS;
+  const selectedPhoto = selectedDay ? getPhotoForDate(selectedDay) : null;
+  const selectedEvents = selectedDay ? getEventsForDate(selectedDay) : [];
 
   return (
-    <ScrollView
-      style={[styles.root, { backgroundColor: colors.bg }]}
-      contentContainerStyle={styles.scrollContent}
-      showsVerticalScrollIndicator={false}
-    >
-      <Animated.View style={{ opacity: fadeAnim }}>
+    <View style={[styles.root, { backgroundColor: colors.bg }]}>
 
-        <Text style={[styles.pageTitle, { color: colors.bright }]}>
-          <Text style={[styles.pageTitleEm, { color: colors.accent }]}>{user.username}</Text>
-        </Text>
-        <Text style={[styles.pageSubtitle, { color: colors.border2 }]}>your story, in numbers</Text>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <Animated.View style={{ opacity: fadeAnim }}>
 
-        <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
-        {/* Emotion bar chart */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.bright }]}>
-            Most felt <Text style={[styles.sectionTitleEm, { color: colors.accent }]}>this week</Text>
+          <Text style={[styles.pageTitle, { color: colors.bright }]}>
+            <Text style={[styles.pageTitleEm, { color: colors.accent }]}>{user.username}</Text>
           </Text>
-          {last7Emotions.length === 0 ? (
-            <Text style={[styles.emptyText, { color: colors.border2 }]}>No emotions logged this week yet.</Text>
-          ) : (
-            <View style={styles.barChart}>
-              {last7Emotions.map(e => (
-                <View key={e.id} style={styles.barRow}>
-                  <Text style={styles.barEmoji}>{e.emoji}</Text>
-                  <View style={[styles.barTrack, { backgroundColor: colors.surface2 }]}>
-                    <View style={[styles.barFill, { backgroundColor: colors.accent, width: `${(e.count / maxEmotionCount) * 100}%` }]} />
+          <Text style={[styles.pageSubtitle, { color: colors.bright }]}>your story, in numbers</Text>
+
+          <View style={[styles.divider, { backgroundColor: colors.bright }]} />
+
+          {/* Emotion bar chart */}
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.bright }]}>
+              Most felt <Text style={[styles.sectionTitleEm, { color: colors.accent }]}>this week</Text>
+            </Text>
+            {last7Emotions.length === 0 ? (
+              <Text style={[styles.emptyText, { color: colors.bright }]}>No emotions logged this week yet.</Text>
+            ) : (
+              <View style={styles.barChart}>
+                {last7Emotions.map(e => (
+                  <View key={e.id} style={styles.barRow}>
+                    <Text style={styles.barEmoji}>{e.emoji}</Text>
+                    <View style={[styles.barTrack, { backgroundColor: colors.surface2 }]}>
+                      <View style={[styles.barFill, { backgroundColor: colors.accent, width: `${(e.count / maxEmotionCount) * 100}%` }]} />
+                    </View>
+                    <Text style={[styles.barLabel, { color: colors.bright }]}>{e.label}</Text>
+                    <Text style={[styles.barCount, { color: colors.bright }]}>{e.count}×</Text>
                   </View>
-                  <Text style={[styles.barLabel, { color: colors.muted }]}>{e.label}</Text>
-                  <Text style={[styles.barCount, { color: colors.border2 }]}>{e.count}×</Text>
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
-
-        <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
-        {/* Calendar */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.bright }]}>
-            Your <Text style={[styles.sectionTitleEm, { color: colors.accent }]}>days</Text>
-          </Text>
-          <Text style={[styles.calendarHint, { color: colors.border2 }]}>Tap a day to see its log</Text>
-
-          <View style={styles.dowRow}>
-            {DOW.map((d, i) => (
-              <Text key={i} style={[styles.dowLabel, { color: colors.border2 }]}>{d}</Text>
-            ))}
+                ))}
+              </View>
+            )}
           </View>
 
-          <View style={styles.calGrid}>
-            {calendarDays.map((d, i) => {
-              if (!d) return <View key={i} style={styles.calCell} />;
-              const isToday = d === dateStr(today);
-              const hasData = dayHasActivity(d);
-              const emoji = dayEmotionSample(d);
-              const hasPhoto = !!getPhotoForDate(d);
-              const thoughtCount = thoughtsByDate[d]?.length ?? 0;
-              return (
-                <TouchableOpacity
-                  key={i}
-                  style={[
-                    styles.calCell,
-                    { borderColor: colors.border, backgroundColor: colors.bg },
-                    hasData && { backgroundColor: colors.surface, borderColor: colors.border2 },
-                    isToday && { borderColor: colors.accent },
-                  ]}
-                  onPress={() => setSelectedDay(d)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[
-                    styles.calDayNum, { color: colors.muted },
-                    isToday && { color: colors.accent, fontWeight: '700' },
-                  ]}>
-                    {parseInt(d.split('-')[2])}
-                  </Text>
-                  {emoji ? (
-                    <Text style={styles.calEmoji}>{emoji}</Text>
-                  ) : hasPhoto ? (
-                    <Text style={styles.calEmoji}>📷</Text>
-                  ) : thoughtCount > 0 ? (
-                    <View style={[styles.calDot, { backgroundColor: colors.accent }]} />
-                  ) : null}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
+          <View style={[styles.divider, { backgroundColor: colors.bright }]} />
 
-        {/* Day modal */}
-        <Modal
-          visible={!!selectedDay}
-          animationType="slide"
-          presentationStyle="pageSheet"
-          onRequestClose={() => setSelectedDay(null)}
-        >
-          <ScrollView
-            style={[styles.modal, { backgroundColor: colors.bg }]}
-            contentContainerStyle={styles.modalContent}
-          >
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalDate, { color: colors.bright }]}>
-                {selectedDay ? friendlyDate(selectedDay) : ''}
-              </Text>
-              <TouchableOpacity onPress={() => setSelectedDay(null)}>
-                <Text style={[styles.modalClose, { color: colors.muted }]}>Close</Text>
+          {/* Calendar */}
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.bright }]}>
+              Your <Text style={[styles.sectionTitleEm, { color: colors.accent }]}>calendar</Text>
+            </Text>
+
+            {/* Month nav */}
+            <View style={styles.monthNav}>
+              <TouchableOpacity onPress={prevMonth} style={styles.monthNavBtn} activeOpacity={0.7}>
+                <Text style={[styles.monthNavArrow, { color: colors.bright }]}>←</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity onPress={goToday} activeOpacity={0.7} style={styles.monthTitleWrap}>
+                <Text style={[styles.monthTitle, { color: colors.bright }]}>
+                  {MONTH_NAMES[calMonth]}{' '}
+                  <Text style={[styles.monthTitleYear, { color: colors.accent }]}>{calYear}</Text>
+                </Text>
+                {!isCurrentMonth && (
+                  <Text style={[styles.todayHint, { color: colors.accent }]}>Tap to return to today</Text>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity onPress={nextMonth} style={styles.monthNavBtn} activeOpacity={0.7}>
+                <Text style={[styles.monthNavArrow, { color: colors.bright }]}>→</Text>
               </TouchableOpacity>
             </View>
 
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
-            {/* Photo */}
-            {selectedPhoto && (
-              <>
-                <View style={styles.modalSection}>
-                  <Image source={{ uri: selectedPhoto }} style={styles.modalPhoto} resizeMode="cover" />
-                </View>
-                <View style={[styles.divider, { backgroundColor: colors.border }]} />
-              </>
-            )}
-
-            {/* Emotions */}
-            <View style={styles.modalSection}>
-              <Text style={[styles.modalSectionTitle, { color: colors.bright }]}>
-                Feelings <Text style={[styles.modalSectionEm, { color: colors.accent }]}>that day</Text>
-              </Text>
-              {selectedEmotionDetails.length === 0 ? (
-                <Text style={[styles.modalEmpty, { color: colors.border2 }]}>No emotions logged.</Text>
-              ) : (
-                <View style={styles.chipRow}>
-                  {selectedEmotionDetails.map(e => (
-                    <View key={e.id} style={[styles.chip, { borderColor: colors.accent, backgroundColor: colors.accentL }]}>
-                      <Text style={styles.chipEmoji}>{e.emoji}</Text>
-                      <Text style={[styles.chipLabel, { color: colors.accentD }]}>{e.label}</Text>
-                    </View>
-                  ))}
-                </View>
-              )}
+            {/* Day of week headers */}
+            <View style={styles.dowRow}>
+              {DOW.map((d, i) => (
+                <Text key={i} style={[styles.dowLabel, { color: colors.bright }]}>{d}</Text>
+              ))}
             </View>
 
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
+            {/* Calendar grid */}
+            <View style={styles.calGrid}>
+              {calGrid.map((d, i) => {
+                if (!d) return <View key={i} style={styles.calCellEmpty} />;
 
-            {/* Habits */}
-            <View style={styles.modalSection}>
-              <Text style={[styles.modalSectionTitle, { color: colors.bright }]}>
-                Habits <Text style={[styles.modalSectionEm, { color: colors.accent }]}>that day</Text>
-              </Text>
-              {selectedHabitDetails.length === 0 ? (
-                <Text style={[styles.modalEmpty, { color: colors.border2 }]}>No habits logged.</Text>
-              ) : (
-                <View style={styles.habitRow}>
-                  {selectedHabitDetails.map(h => (
-                    <View key={h.id} style={[styles.habitChip, { borderColor: colors.accent, backgroundColor: colors.accentL }]}>
-                      <Text style={styles.chipEmoji}>{h.emoji}</Text>
-                      <Text style={[styles.chipLabel, { color: colors.accentD }]}>{h.label}</Text>
-                    </View>
-                  ))}
-                </View>
-              )}
-            </View>
+                const isToday = d === dateStr(today);
+                const future = isFuture(d);
+                const hasData = !future && dayHasActivity(d);
+                const hasEvents = hasEventOnDate(d);
 
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
-            {/* Thoughts */}
-            <View style={styles.modalSection}>
-              <Text style={[styles.modalSectionTitle, { color: colors.bright }]}>
-                {selectedThoughts.length}{' '}
-                <Text style={[styles.modalSectionEm, { color: colors.accent }]}>
-                  {selectedThoughts.length === 1 ? 'thought' : 'thoughts'}
-                </Text>
-              </Text>
-              {selectedThoughts.length === 0 ? (
-                <Text style={[styles.modalEmpty, { color: colors.border2 }]}>No entries written.</Text>
-              ) : (
-                selectedThoughts.map(t => (
+                return (
                   <TouchableOpacity
-                    key={t.id}
-                    style={[styles.thoughtEntry, { borderTopColor: colors.border }]}
-                    onLongPress={() => confirmDelete(t.id)}
+                    key={i}
+                    style={[
+                      styles.calCell,
+                      { borderColor: colors.bright, backgroundColor: colors.bg },
+                      isToday && { borderColor: colors.accent },
+                    ]}
+                    onPress={() => handleDayPress(d)}
                     activeOpacity={0.7}
                   >
-                    <View style={styles.thoughtMeta}>
-                      <Text style={[styles.thoughtTime, { color: colors.border2 }]}>
-                        {new Date(t.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
-                      </Text>
-                      {t.tag ? <Text style={[styles.thoughtTag, { color: colors.accent }]}>{t.tag}</Text> : null}
+                    <Text style={[
+                      styles.calDayNum,
+                      { color: colors.bright },
+                      future && { opacity: 0.35 },
+                      isToday && { color: colors.accent, opacity: 1, fontWeight: '700' },
+                    ]}>
+                      {parseInt(d.split('-')[2])}
+                    </Text>
+                    <View style={styles.calDotRow}>
+                      <View style={[styles.calDot, { backgroundColor: hasData ? colors.bright : 'transparent' }]} />
+                      <View style={[styles.calDot, { backgroundColor: hasEvents ? colors.accent : 'transparent' }]} />
                     </View>
-                    <Text style={[styles.thoughtBody, { color: colors.text }]}>{t.body}</Text>
                   </TouchableOpacity>
-                ))
-              )}
+                );
+              })}
             </View>
 
-            {selectedThoughts.length > 0 && (
-              <Text style={[styles.deleteHint, { color: colors.border }]}>Long-press a thought to delete</Text>
+            {/* Legend */}
+            <View style={styles.legend}>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendDot, { backgroundColor: colors.bright }]} />
+                <Text style={[styles.legendText, { color: colors.bright }]}>Has log</Text>
+              </View>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendDot, { backgroundColor: colors.accent }]} />
+                <Text style={[styles.legendText, { color: colors.bright }]}>Event</Text>
+              </View>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendCell, { borderColor: colors.accent }]}>
+                  <Text style={[styles.legendCellNum, { color: colors.accent }]}>1</Text>
+                </View>
+                <Text style={[styles.legendText, { color: colors.bright }]}>Today</Text>
+              </View>
+              <View style={styles.legendItem}>
+                <Text style={[styles.legendText, { color: colors.bright, opacity: 0.5 }]}>dots: top = log · bottom = event</Text>
+              </View>
+            </View>
+          </View>
+
+        </Animated.View>
+      </ScrollView>
+
+      {/* Day modal — sibling of ScrollView */}
+      <Modal
+        visible={!!selectedDay}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={handleCloseDay}
+      >
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <ScrollView
+            style={[styles.modal, { backgroundColor: colors.bg }]}
+            contentContainerStyle={styles.modalContent}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={styles.modalHeader}>
+              <View style={styles.modalHeaderLeft}>
+                <Text style={[styles.modalDate, { color: colors.bright }]}>
+                  {selectedDay ? friendlyDate(selectedDay) : ''}
+                </Text>
+                {selectedDay && isFuture(selectedDay) && (
+                  <Text style={[styles.modalFuturePill, { color: colors.accent, borderColor: colors.accent }]}>
+                    Upcoming
+                  </Text>
+                )}
+              </View>
+              <TouchableOpacity onPress={handleCloseDay}>
+                <Text style={[styles.modalClose, { color: colors.bright }]}>Close</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={[styles.divider, { backgroundColor: colors.bright }]} />
+
+            {/* FUTURE DAY */}
+            {selectedIsFuture && (
+              <View style={styles.modalSection}>
+                <Text style={[styles.modalSectionTitle, { color: colors.bright }]}>
+                  Events <Text style={[styles.modalSectionEm, { color: colors.accent }]}>planned</Text>
+                </Text>
+
+                {selectedEvents.length > 0 && (
+                  <View style={styles.eventList}>
+                    {selectedEvents.map(ev => (
+                      <View key={ev.id} style={[styles.eventCard, { backgroundColor: colors.surface }]}>
+                        <View style={[styles.eventCardAccent, { backgroundColor: colors.accent }]} />
+                        <View style={styles.eventCardBody}>
+                          <Text style={[styles.eventCardTitle, { color: colors.bright }]}>{ev.title}</Text>
+                          {ev.note ? <Text style={[styles.eventCardNote, { color: colors.bright }]}>{ev.note}</Text> : null}
+                        </View>
+                        <View style={styles.eventCardActions}>
+                          <TouchableOpacity onPress={() => handleEditEvent(ev)} activeOpacity={0.7}>
+                            <Text style={[styles.eventActionText, { color: colors.accent }]}>Edit</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity onPress={() => handleDeleteEvent(ev.id)} activeOpacity={0.7}>
+                            <Text style={[styles.eventActionText, { color: colors.error }]}>Delete</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                {showEventForm ? (
+                  <View style={[styles.eventForm, { backgroundColor: colors.surface }]}>
+                    <Text style={[styles.eventFormLabel, { color: colors.bright }]}>
+                      {editingEvent ? 'Edit event' : 'New event'}
+                    </Text>
+                    <TextInput
+                      style={[styles.eventFormInput, { color: colors.text, borderBottomColor: colors.bright }]}
+                      placeholder="e.g. Doctor's appointment"
+                      placeholderTextColor={colors.bright}
+                      value={eventTitle}
+                      onChangeText={setEventTitle}
+                      autoFocus
+                      returnKeyType="next"
+                    />
+                    <TextInput
+                      style={[styles.eventFormNote, { color: colors.text, borderBottomColor: colors.bright }]}
+                      placeholder="Add a note (optional)"
+                      placeholderTextColor={colors.bright}
+                      value={eventNote}
+                      onChangeText={setEventNote}
+                      returnKeyType="done"
+                      onSubmitEditing={handleSaveEvent}
+                    />
+                    <View style={styles.eventFormActions}>
+                      <TouchableOpacity onPress={handleCancelEventForm} activeOpacity={0.7}>
+                        <Text style={[styles.eventCancelText, { color: colors.bright }]}>Cancel</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.eventSaveBtn, { backgroundColor: eventTitle.trim() ? colors.accent : colors.surface2 }]}
+                        onPress={handleSaveEvent}
+                        disabled={!eventTitle.trim()}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={[styles.eventSaveBtnText, { color: colors.white }]}>
+                          {editingEvent ? 'Save changes' : 'Add event'}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={[styles.addEventBtn, { borderColor: colors.accent }]}
+                    onPress={() => setShowEventForm(true)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.addEventBtnText, { color: colors.accent }]}>+ Add event</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+
+            {/* PAST / TODAY */}
+            {!selectedIsFuture && (
+              <>
+                {selectedEvents.length > 0 && (
+                  <>
+                    <View style={styles.modalSection}>
+                      <Text style={[styles.modalSectionTitle, { color: colors.bright }]}>
+                        Events <Text style={[styles.modalSectionEm, { color: colors.accent }]}>that day</Text>
+                      </Text>
+                      <View style={styles.eventList}>
+                        {selectedEvents.map(ev => (
+                          <View key={ev.id} style={[styles.eventCard, { backgroundColor: colors.surface }]}>
+                            <View style={[styles.eventCardAccent, { backgroundColor: colors.accent }]} />
+                            <View style={styles.eventCardBody}>
+                              <Text style={[styles.eventCardTitle, { color: colors.bright }]}>{ev.title}</Text>
+                              {ev.note ? <Text style={[styles.eventCardNote, { color: colors.bright }]}>{ev.note}</Text> : null}
+                            </View>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+                    <View style={[styles.divider, { backgroundColor: colors.bright }]} />
+                  </>
+                )}
+
+                {selectedPhoto && (
+                  <>
+                    <View style={styles.modalSection}>
+                      <Image source={{ uri: selectedPhoto }} style={styles.modalPhoto} resizeMode="cover" />
+                    </View>
+                    <View style={[styles.divider, { backgroundColor: colors.bright }]} />
+                  </>
+                )}
+
+                <View style={styles.modalSection}>
+                  <Text style={[styles.modalSectionTitle, { color: colors.bright }]}>
+                    Feelings <Text style={[styles.modalSectionEm, { color: colors.accent }]}>that day</Text>
+                  </Text>
+                  {selectedEmotionDetails.length === 0 ? (
+                    <Text style={[styles.modalEmpty, { color: colors.bright }]}>No emotions logged.</Text>
+                  ) : (
+                    <View style={styles.chipRow}>
+                      {selectedEmotionDetails.map(e => (
+                        <View key={e.id} style={[styles.chip, { backgroundColor: colors.surface }]}>
+                          <Text style={styles.chipEmoji}>{e.emoji}</Text>
+                          <Text style={[styles.chipLabel, { color: colors.bright }]}>{e.label}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
+
+                <View style={[styles.divider, { backgroundColor: colors.bright }]} />
+
+                <View style={styles.modalSection}>
+                  <Text style={[styles.modalSectionTitle, { color: colors.bright }]}>
+                    Habits <Text style={[styles.modalSectionEm, { color: colors.accent }]}>that day</Text>
+                  </Text>
+                  {selectedHabitDetails.length === 0 ? (
+                    <Text style={[styles.modalEmpty, { color: colors.bright }]}>No habits logged.</Text>
+                  ) : (
+                    <View style={styles.habitRow}>
+                      {selectedHabitDetails.map(h => (
+                        <View key={h.id} style={[styles.habitChip, { backgroundColor: colors.surface }]}>
+                          <Text style={styles.chipEmoji}>{h.emoji}</Text>
+                          <Text style={[styles.chipLabel, { color: colors.bright }]}>{h.label}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
+
+                <View style={[styles.divider, { backgroundColor: colors.bright }]} />
+
+                <View style={styles.modalSection}>
+                  <Text style={[styles.modalSectionTitle, { color: colors.bright }]}>
+                    {selectedThoughts.length}{' '}
+                    <Text style={[styles.modalSectionEm, { color: colors.accent }]}>
+                      {selectedThoughts.length === 1 ? 'thought' : 'thoughts'}
+                    </Text>
+                  </Text>
+                  {selectedThoughts.length === 0 ? (
+                    <Text style={[styles.modalEmpty, { color: colors.bright }]}>No entries written.</Text>
+                  ) : (
+                    selectedThoughts.map(t => (
+                      <TouchableOpacity
+                        key={t.id}
+                        style={[styles.thoughtEntry, { borderTopColor: colors.bright }]}
+                        onLongPress={() => confirmDelete(t.id)}
+                        activeOpacity={0.7}
+                      >
+                        <View style={styles.thoughtMeta}>
+                          <Text style={[styles.thoughtTime, { color: colors.bright }]}>
+                            {new Date(t.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                          </Text>
+                          {t.tag ? <Text style={[styles.thoughtTag, { color: colors.accent }]}>{t.tag}</Text> : null}
+                        </View>
+                        <Text style={[styles.thoughtBody, { color: colors.bright }]}>{t.body}</Text>
+                      </TouchableOpacity>
+                    ))
+                  )}
+                  {selectedThoughts.length > 0 && (
+                    <Text style={[styles.deleteHint, { color: colors.bright }]}>Long-press a thought to delete</Text>
+                  )}
+                </View>
+              </>
             )}
           </ScrollView>
-        </Modal>
+        </KeyboardAvoidingView>
+      </Modal>
 
-      </Animated.View>
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  scrollContent: { paddingHorizontal: 28, paddingTop: 16, paddingBottom: 60 },
+  scrollContent: { paddingHorizontal: 28, paddingTop: 28, paddingBottom: 60 },
 
   pageTitle: { fontFamily: 'Georgia', fontSize: 32, fontWeight: '300', letterSpacing: -0.5, marginBottom: 4 },
   pageTitleEm: { fontStyle: 'italic' },
-  pageSubtitle: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 13, marginBottom: 20 },
+  pageSubtitle: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 13, marginBottom: 16 },
 
-  divider: { height: 1, marginVertical: 24 },
+  divider: { height: 1, marginVertical: 16 },
 
   section: { marginBottom: 0 },
   sectionTitle: { fontFamily: 'Georgia', fontSize: 20, fontWeight: '300', letterSpacing: -0.3, marginBottom: 18 },
@@ -349,19 +594,44 @@ const styles = StyleSheet.create({
   barLabel: { fontFamily: 'System', fontSize: 10, fontWeight: '500', width: 68 },
   barCount: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 12, width: 20, textAlign: 'right' },
 
-  calendarHint: { fontFamily: 'System', fontSize: 9, fontStyle: 'italic', marginTop: -10, marginBottom: 16 },
-  dowRow: { flexDirection: 'row', gap: 4, marginBottom: 6 },
-  dowLabel: { width: DAY_SIZE, textAlign: 'center', fontFamily: 'System', fontSize: 9, fontWeight: '600', letterSpacing: 0.5 },
-  calGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
-  calCell: { width: DAY_SIZE, height: DAY_SIZE, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-  calDayNum: { fontFamily: 'System', fontSize: 10, fontWeight: '500' },
-  calEmoji: { fontSize: 10, marginTop: 1 },
-  calDot: { width: 4, height: 4, borderRadius: 2, marginTop: 1 },
+  // Month navigation
+  monthNav: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginBottom: 18,
+  },
+  monthNavBtn: { padding: 8 },
+  monthNavArrow: { fontFamily: 'System', fontSize: 18, fontWeight: '300' },
+  monthTitleWrap: { alignItems: 'center', flex: 1 },
+  monthTitle: { fontFamily: 'Georgia', fontSize: 18, fontWeight: '300', letterSpacing: -0.3 },
+  monthTitleYear: { fontStyle: 'italic' },
+  todayHint: { fontFamily: 'System', fontSize: 8, fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase', marginTop: 3 },
 
+  // Calendar grid
+  dowRow: { flexDirection: 'row', marginBottom: 6 },
+  dowLabel: { width: DAY_SIZE, textAlign: 'center', fontFamily: 'System', fontSize: 9, fontWeight: '600', letterSpacing: 0.5 },
+  calGrid: { flexDirection: 'row', flexWrap: 'wrap' },
+  calCell: { width: DAY_SIZE, height: DAY_SIZE, alignItems: 'center', justifyContent: 'center', borderWidth: 1, margin: 1 },
+  calCellEmpty: { width: DAY_SIZE, height: DAY_SIZE, margin: 1 },
+  calDayNum: { fontFamily: 'System', fontSize: 11, fontWeight: '500' },
+  calDotRow: { position: 'absolute', bottom: Math.floor(DAY_SIZE * 0.18), left: Math.floor(DAY_SIZE * 0.18), right: Math.floor(DAY_SIZE * 0.18), flexDirection: 'row', justifyContent: 'space-between' },
+  calDot: { width: 4, height: 4, borderRadius: 2 },
+  calDotPlaceholder: { width: 4, height: 4 },
+
+  // Legend
+  legend: { flexDirection: 'row', gap: 18, marginTop: 14 },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  legendDot: { width: 8, height: 8, borderRadius: 4 },
+  legendCell: { width: 16, height: 16, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+  legendCellNum: { fontFamily: 'System', fontSize: 8, fontWeight: '700' },
+  legendText: { fontFamily: 'System', fontSize: 9, fontWeight: '500', letterSpacing: 0.3 },
+
+  // Modal
   modal: { flex: 1 },
   modalContent: { paddingHorizontal: 28, paddingTop: 28, paddingBottom: 60 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 },
-  modalDate: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 22, fontWeight: '300', flex: 1, letterSpacing: -0.3, lineHeight: 28 },
+  modalHeaderLeft: { flex: 1, gap: 8 },
+  modalDate: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 22, fontWeight: '300', letterSpacing: -0.3, lineHeight: 28 },
+  modalFuturePill: { fontFamily: 'System', fontSize: 8, fontWeight: '700', letterSpacing: 1.2, textTransform: 'uppercase', borderWidth: 1, paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-start' },
   modalClose: { fontFamily: 'System', fontSize: 10, fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase', paddingTop: 4 },
   modalPhoto: { width: '100%', height: 220, marginBottom: 4 },
   modalSection: { marginBottom: 0 },
@@ -369,19 +639,38 @@ const styles = StyleSheet.create({
   modalSectionEm: { fontStyle: 'italic' },
   modalEmpty: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 13 },
 
+  eventList: { gap: 10, marginBottom: 16 },
+  eventCard: { flexDirection: 'row', overflow: 'hidden' },
+  eventCardAccent: { width: 3 },
+  eventCardBody: { flex: 1, padding: 14 },
+  eventCardTitle: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 16, fontWeight: '300', marginBottom: 3 },
+  eventCardNote: { fontFamily: 'System', fontSize: 11, lineHeight: 17 },
+  eventCardActions: { flexDirection: 'column', justifyContent: 'center', gap: 10, paddingHorizontal: 14 },
+  eventActionText: { fontFamily: 'System', fontSize: 9, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase' },
+
+  addEventBtn: { borderWidth: 1, paddingVertical: 12, paddingHorizontal: 20, alignSelf: 'flex-start' },
+  addEventBtnText: { fontFamily: 'System', fontSize: 10, fontWeight: '700', letterSpacing: 0.9, textTransform: 'uppercase' },
+  eventForm: { padding: 18, gap: 14 },
+  eventFormLabel: { fontFamily: 'System', fontSize: 8, fontWeight: '700', letterSpacing: 1.2, textTransform: 'uppercase' },
+  eventFormInput: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 17, paddingVertical: 8, borderBottomWidth: 1 },
+  eventFormNote: { fontFamily: 'System', fontSize: 13, paddingVertical: 8, borderBottomWidth: 1 },
+  eventFormActions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 },
+  eventCancelText: { fontFamily: 'System', fontSize: 10, fontWeight: '500' },
+  eventSaveBtn: { paddingHorizontal: 18, paddingVertical: 10 },
+  eventSaveBtnText: { fontFamily: 'System', fontSize: 9, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase' },
+
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 6, paddingHorizontal: 11, borderWidth: 1 },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 6, paddingHorizontal: 11 },
   chipEmoji: { fontSize: 13 },
   chipLabel: { fontFamily: 'System', fontSize: 10, fontWeight: '500' },
 
   habitRow: { flexDirection: 'column', gap: 8 },
-  habitChip: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, paddingHorizontal: 14, borderWidth: 1 },
+  habitChip: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, paddingHorizontal: 14 },
 
   thoughtEntry: { paddingVertical: 16, borderTopWidth: 1 },
   thoughtMeta: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 7 },
   thoughtTime: { fontFamily: 'System', fontSize: 9, fontWeight: '600', letterSpacing: 0.9, textTransform: 'uppercase' },
   thoughtTag: { fontFamily: 'System', fontSize: 9, fontWeight: '600', letterSpacing: 0.8, textTransform: 'uppercase' },
   thoughtBody: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 15, lineHeight: 25 },
-
   deleteHint: { fontFamily: 'System', fontSize: 9, fontStyle: 'italic', textAlign: 'center', marginTop: 20 },
 });

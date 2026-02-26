@@ -7,6 +7,7 @@ import { useThoughts } from './hooks/useThoughts';
 import { useEmotions } from './hooks/useEmotions';
 import { usePhotos } from './hooks/usePhotos';
 import { useHabits } from './hooks/useHabits';
+import { useEvents } from './hooks/useEvents';
 import DashboardScreen from './components/DashboardScreen';
 import ArchiveScreen from './components/ArchiveScreen';
 import ProfileScreen from './components/ProfileScreen';
@@ -24,6 +25,7 @@ function Inner() {
   const { todayEmotions, toggleEmotion, confirmSave, history: emotionHistory, saved } = useEmotions();
   const { todayPhoto, savePhoto, removePhoto, getPhotoForDate } = usePhotos();
   const { todayHabits, toggleHabit, confirmSave: confirmHabitSave, history: habitHistory, saved: habitsSaved } = useHabits();
+  const { events, addEvent, deleteEvent, updateEvent, getEventsForDate } = useEvents();
 
   if (loading) {
     return (
@@ -72,6 +74,11 @@ function Inner() {
               habitHistory={habitHistory}
               onDelete={deleteThought}
               getPhotoForDate={getPhotoForDate}
+              events={events}
+              onAddEvent={addEvent}
+              onDeleteEvent={deleteEvent}
+              onUpdateEvent={updateEvent}
+              getEventsForDate={getEventsForDate}
             />
           )}
           {activeTab === 'profile' && (
@@ -79,7 +86,7 @@ function Inner() {
           )}
         </View>
         <SafeAreaView edges={['bottom']} style={[styles.tabBarSafe, { backgroundColor: colors.bg }]}>
-          <View style={[styles.tabBar, { backgroundColor: colors.bg, borderTopColor: colors.border }]}>
+          <View style={[styles.tabBar, { backgroundColor: colors.bg, borderTopColor: colors.bright }]}>
             {(['today', 'archive', 'profile'] as Tab[]).map((tab) => (
               <TouchableOpacity
                 key={tab}
@@ -89,7 +96,7 @@ function Inner() {
               >
                 <Text style={[
                   styles.tabLabel,
-                  { color: colors.border2 },
+                  { color: colors.bright },
                   activeTab === tab && { color: colors.accent },
                 ]}>
                   {tab}

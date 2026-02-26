@@ -113,33 +113,33 @@ export default function DashboardScreen({
       >
         <Animated.View style={{ opacity: fadeAnim }}>
 
-          <Text style={[styles.date, { color: colors.border2 }]}>{today}</Text>
+          <Text style={[styles.date, { color: colors.bright }]}>{today}</Text>
 
           <Text style={[styles.title, { color: colors.bright }]}>
             What are{'\n'}you <Text style={[styles.titleEm, { color: colors.accent }]}>thinking?</Text>
           </Text>
 
-          <View style={[styles.quoteWrap, { borderBottomColor: colors.border }]}>
+          <View style={[styles.quoteWrap, { borderBottomColor: colors.bright }]}>
             <View style={[styles.quoteBorder, { backgroundColor: colors.accent }]} />
-            <Text style={[styles.quote, { color: colors.border2 }]}>"{quote}"</Text>
+            <Text style={[styles.quote, { color: colors.bright }]}>"{quote}"</Text>
           </View>
 
           <View style={styles.statsRow}>
             <View style={styles.stat}>
               <Text style={[styles.statNum, { color: colors.accent }]}>{user.streak}</Text>
-              <Text style={[styles.statLabel, { color: colors.border2 }]}>Streak</Text>
+              <Text style={[styles.statLabel, { color: colors.bright }]}>Streak</Text>
             </View>
             <View style={styles.stat}>
               <Text style={[styles.statNum, { color: colors.bright }]}>{user.thoughtsToday}</Text>
-              <Text style={[styles.statLabel, { color: colors.border2 }]}>Today</Text>
+              <Text style={[styles.statLabel, { color: colors.bright }]}>Today</Text>
             </View>
             <View style={styles.stat}>
               <Text style={[styles.statNum, { color: colors.bright }]}>{user.thoughtsTotal}</Text>
-              <Text style={[styles.statLabel, { color: colors.border2 }]}>Total</Text>
+              <Text style={[styles.statLabel, { color: colors.bright }]}>Total</Text>
             </View>
           </View>
 
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          <View style={[styles.divider, { backgroundColor: colors.bright }]} />
 
           {/* Tag pills */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false}
@@ -149,14 +149,14 @@ export default function DashboardScreen({
                 key={tag}
                 style={[
                   styles.tagPill,
-                  { borderColor: colors.border, backgroundColor: colors.bg },
+                  { borderColor: 'transparent', backgroundColor: colors.bg },
                   activeTag === tag && { borderColor: colors.accent },
                 ]}
                 onPress={() => setActiveTag(activeTag === tag ? '' : tag)}
                 activeOpacity={0.7}
               >
                 <Text style={[
-                  styles.tagText, { color: colors.border2 },
+                  styles.tagText, { color: colors.bright },
                   activeTag === tag && { color: colors.accent },
                 ]}>{tag}</Text>
               </TouchableOpacity>
@@ -167,12 +167,12 @@ export default function DashboardScreen({
             style={[styles.textarea, { color: colors.text }]}
             multiline
             placeholder="Begin anywhere. There's no wrong way in…"
-            placeholderTextColor={colors.border2}
+            placeholderTextColor={colors.bright}
             value={body}
             onChangeText={setBody}
             textAlignVertical="top"
           />
-          <View style={[styles.textareaBorder, { backgroundColor: colors.border }]} />
+          <View style={[styles.textareaBorder, { backgroundColor: colors.bright }]} />
 
           <View style={styles.composeFooter}>
             <TouchableOpacity
@@ -188,39 +188,51 @@ export default function DashboardScreen({
                 {saving ? 'Saving…' : 'Save entry'}
               </Text>
             </TouchableOpacity>
-            <Text style={[styles.charCount, { color: colors.border2 }]}>{body.length} / ∞</Text>
+            <Text style={[styles.charCount, { color: colors.bright }]}>{body.length} / ∞</Text>
           </View>
 
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          <View style={[styles.divider, { backgroundColor: colors.bright }]} />
 
           {/* Emotion tracker */}
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.bright }]}>
               How are you <Text style={[styles.sectionTitleEm, { color: colors.accent }]}>feeling?</Text>
             </Text>
+
+            {/* 2-column grid: pair up emotions */}
             <View style={styles.emotionGrid}>
-              {EMOTIONS.map((e) => {
-                const active = (todayEmotions ?? []).includes(e.id);
+              {Array.from({ length: Math.ceil(EMOTIONS.length / 2) }).map((_, rowIdx) => {
+                const left = EMOTIONS[rowIdx * 2];
+                const right = EMOTIONS[rowIdx * 2 + 1];
                 return (
-                  <TouchableOpacity
-                    key={e.id}
-                    style={[
-                      styles.emotionPill,
-                      { borderColor: colors.border, backgroundColor: colors.bg },
-                      active && { borderColor: colors.accent },
-                    ]}
-                    onPress={() => onToggleEmotion(e.id)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.emotionEmoji}>{e.emoji}</Text>
-                    <Text style={[
-                      styles.emotionLabel, { color: colors.muted },
-                      active && { color: colors.accentD },
-                    ]}>{e.label}</Text>
-                  </TouchableOpacity>
+                  <View key={rowIdx} style={styles.emotionRow}>
+                    {[left, right].map((e, colIdx) => {
+                      if (!e) return <View key={colIdx} style={styles.emotionCell} />;
+                      const active = (todayEmotions ?? []).includes(e.id);
+                      return (
+                        <TouchableOpacity
+                          key={e.id}
+                          style={[
+                            styles.emotionCell,
+                            { borderColor: 'transparent', backgroundColor: colors.bg },
+                            active && { borderColor: colors.accent },
+                          ]}
+                          onPress={() => onToggleEmotion(e.id)}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={styles.emotionEmoji}>{e.emoji}</Text>
+                          <Text style={[
+                            styles.emotionLabel, { color: colors.bright },
+                            active && { color: colors.accent },
+                          ]}>{e.label}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
                 );
               })}
             </View>
+
             {(todayEmotions ?? []).length > 0 && (
               <View style={styles.trackFooter}>
                 {emotionsSaved ? (
@@ -240,7 +252,7 @@ export default function DashboardScreen({
             )}
           </View>
 
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          <View style={[styles.divider, { backgroundColor: colors.bright }]} />
 
           {/* Habit tracker */}
           <View style={styles.section}>
@@ -255,16 +267,16 @@ export default function DashboardScreen({
                     key={h.id}
                     style={[
                       styles.habitPill,
-                      { borderColor: colors.border, backgroundColor: colors.bg },
-                      active && { borderColor: colors.accent, backgroundColor: colors.accentL },
+                      { borderColor: 'transparent', backgroundColor: colors.bg },
+                      active && { borderColor: colors.accent },
                     ]}
                     onPress={() => onToggleHabit(h.id)}
                     activeOpacity={0.7}
                   >
                     <Text style={styles.habitEmoji}>{h.emoji}</Text>
                     <Text style={[
-                      styles.habitLabel, { color: colors.muted },
-                      active && { color: colors.accentD },
+                      styles.habitLabel, { color: colors.bright },
+                      active && { color: colors.accent },
                     ]}>{h.label}</Text>
                     {active && (
                       <View style={[styles.habitCheck, { backgroundColor: colors.accent }]}>
@@ -294,7 +306,7 @@ export default function DashboardScreen({
             )}
           </View>
 
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          <View style={[styles.divider, { backgroundColor: colors.bright }]} />
 
           {/* Photo */}
           <View style={styles.section}>
@@ -304,17 +316,17 @@ export default function DashboardScreen({
             {todayPhoto ? (
               <TouchableOpacity onPress={handlePhotoPress} activeOpacity={0.9}>
                 <Image source={{ uri: todayPhoto }} style={styles.photo} resizeMode="cover" />
-                <Text style={[styles.photoHint, { color: colors.border2 }]}>Tap to replace or remove</Text>
+                <Text style={[styles.photoHint, { color: colors.bright }]}>Tap to replace or remove</Text>
               </TouchableOpacity>
             ) : (
               <TouchableOpacity
-                style={[styles.photoPlaceholder, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                style={[styles.photoPlaceholder, { borderColor: colors.bright, backgroundColor: colors.surface }]}
                 onPress={handlePhotoPress}
                 activeOpacity={0.7}
               >
-                <Text style={[styles.photoPlaceholderIcon, { color: colors.border2 }]}>◻</Text>
-                <Text style={[styles.photoPlaceholderText, { color: colors.muted }]}>Add a photo to today's log</Text>
-                <Text style={[styles.photoPlaceholderHint, { color: colors.border2 }]}>camera or library</Text>
+                <Text style={[styles.photoPlaceholderIcon, { color: colors.bright }]}>◻</Text>
+                <Text style={[styles.photoPlaceholderText, { color: colors.bright }]}>Add a photo to today's log</Text>
+                <Text style={[styles.photoPlaceholderHint, { color: colors.bright }]}>camera or library</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -362,10 +374,20 @@ const styles = StyleSheet.create({
   sectionTitle: { fontFamily: 'Georgia', fontSize: 20, fontWeight: '300', letterSpacing: -0.3, marginBottom: 18 },
   sectionTitleEm: { fontStyle: 'italic' },
 
-  emotionGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 },
-  emotionPill: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 7, paddingHorizontal: 12, borderWidth: 1 },
-  emotionEmoji: { fontSize: 13 },
-  emotionLabel: { fontFamily: 'System', fontSize: 10, fontWeight: '500' },
+  // Emotion 2-column grid
+  emotionGrid: { flexDirection: 'column', gap: 8, marginBottom: 20 },
+  emotionRow: { flexDirection: 'row', gap: 8 },
+  emotionCell: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+  },
+  emotionEmoji: { fontSize: 15 },
+  emotionLabel: { fontFamily: 'System', fontSize: 10, fontWeight: '500', flexShrink: 1 },
 
   // Habit tracker
   habitGrid: { flexDirection: 'column', gap: 10, marginBottom: 20 },

@@ -8,6 +8,7 @@ import { ThemeContext } from '../context/ThemeContext';
 import { TAGS, getDailyQuote } from '../constants/data';
 import { Thought, UserStats } from '../hooks/useThoughts';
 import { EMOTIONS } from '../hooks/useEmotions';
+import { HABITS } from '../hooks/useHabits';
 
 interface Props {
   thoughts: Thought[];
@@ -20,12 +21,17 @@ interface Props {
   todayPhoto: string | null;
   onSavePhoto: (uri: string) => Promise<void>;
   onRemovePhoto: () => Promise<void>;
+  todayHabits: string[];
+  onToggleHabit: (id: string) => void;
+  onConfirmHabitSave: (habits: string[]) => Promise<void>;
+  habitsSaved: boolean;
 }
 
 export default function DashboardScreen({
   thoughts, user, onAdd,
   todayEmotions, onToggleEmotion, onConfirmSave, emotionsSaved,
   todayPhoto, onSavePhoto, onRemovePhoto,
+  todayHabits, onToggleHabit, onConfirmHabitSave, habitsSaved,
 }: Props) {
   const { colors } = useContext(ThemeContext);
   const [body, setBody] = useState('');
@@ -56,13 +62,9 @@ export default function DashboardScreen({
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.8,
+      allowsEditing: true, aspect: [4, 3], quality: 0.8,
     });
-    if (!result.canceled && result.assets[0]) {
-      await onSavePhoto(result.assets[0].uri);
-    }
+    if (!result.canceled && result.assets[0]) await onSavePhoto(result.assets[0].uri);
   }
 
   async function handleTakePhoto() {
@@ -72,13 +74,9 @@ export default function DashboardScreen({
       return;
     }
     const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.8,
+      allowsEditing: true, aspect: [4, 3], quality: 0.8,
     });
-    if (!result.canceled && result.assets[0]) {
-      await onSavePhoto(result.assets[0].uri);
-    }
+    if (!result.canceled && result.assets[0]) await onSavePhoto(result.assets[0].uri);
   }
 
   function handlePhotoPress() {
@@ -158,8 +156,7 @@ export default function DashboardScreen({
                 activeOpacity={0.7}
               >
                 <Text style={[
-                  styles.tagText,
-                  { color: colors.border2 },
+                  styles.tagText, { color: colors.border2 },
                   activeTag === tag && { color: colors.accent },
                 ]}>{tag}</Text>
               </TouchableOpacity>
@@ -180,8 +177,7 @@ export default function DashboardScreen({
           <View style={styles.composeFooter}>
             <TouchableOpacity
               style={[
-                styles.saveBtn,
-                { backgroundColor: colors.accent },
+                styles.saveBtn, { backgroundColor: colors.accent },
                 (!body.trim() || saving) && { backgroundColor: colors.border2 },
               ]}
               onPress={handleSave}
@@ -218,18 +214,15 @@ export default function DashboardScreen({
                   >
                     <Text style={styles.emotionEmoji}>{e.emoji}</Text>
                     <Text style={[
-                      styles.emotionLabel,
-                      { color: colors.muted },
+                      styles.emotionLabel, { color: colors.muted },
                       active && { color: colors.accentD },
-                    ]}>
-                      {e.label}
-                    </Text>
+                    ]}>{e.label}</Text>
                   </TouchableOpacity>
                 );
               })}
             </View>
             {(todayEmotions ?? []).length > 0 && (
-              <View style={styles.emotionFooter}>
+              <View style={styles.trackFooter}>
                 {emotionsSaved ? (
                   <Text style={[styles.savedConfirm, { color: colors.accent }]}>✓ Saved for today</Text>
                 ) : (
@@ -249,12 +242,65 @@ export default function DashboardScreen({
 
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
+          {/* Habit tracker */}
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.bright }]}>
+              Today's <Text style={[styles.sectionTitleEm, { color: colors.accent }]}>habits.</Text>
+            </Text>
+            <View style={styles.habitGrid}>
+              {HABITS.map((h) => {
+                const active = (todayHabits ?? []).includes(h.id);
+                return (
+                  <TouchableOpacity
+                    key={h.id}
+                    style={[
+                      styles.habitPill,
+                      { borderColor: colors.border, backgroundColor: colors.bg },
+                      active && { borderColor: colors.accent, backgroundColor: colors.accentL },
+                    ]}
+                    onPress={() => onToggleHabit(h.id)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.habitEmoji}>{h.emoji}</Text>
+                    <Text style={[
+                      styles.habitLabel, { color: colors.muted },
+                      active && { color: colors.accentD },
+                    ]}>{h.label}</Text>
+                    {active && (
+                      <View style={[styles.habitCheck, { backgroundColor: colors.accent }]}>
+                        <Text style={styles.habitCheckMark}>✓</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            {(todayHabits ?? []).length > 0 && (
+              <View style={styles.trackFooter}>
+                {habitsSaved ? (
+                  <Text style={[styles.savedConfirm, { color: colors.accent }]}>✓ Saved for today</Text>
+                ) : (
+                  <TouchableOpacity
+                    style={[styles.doneBtn, { borderColor: colors.accent }]}
+                    onPress={() => onConfirmHabitSave(todayHabits)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.doneBtnText, { color: colors.accent }]}>
+                      Done — save {todayHabits.length} habit{todayHabits.length > 1 ? 's' : ''}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+          </View>
+
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
           {/* Photo */}
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.bright }]}>
               Today's <Text style={[styles.sectionTitleEm, { color: colors.accent }]}>moment.</Text>
             </Text>
-
             {todayPhoto ? (
               <TouchableOpacity onPress={handlePhotoPress} activeOpacity={0.9}>
                 <Image source={{ uri: todayPhoto }} style={styles.photo} resizeMode="cover" />
@@ -284,20 +330,11 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: 28, paddingTop: 16, paddingBottom: 60 },
 
-  date: {
-    fontFamily: 'System', fontSize: 9, fontWeight: '600',
-    letterSpacing: 1.4, textTransform: 'uppercase', marginBottom: 22,
-  },
-  title: {
-    fontFamily: 'Georgia', fontSize: 36, fontWeight: '300',
-    lineHeight: 40, letterSpacing: -0.8, marginBottom: 26,
-  },
+  date: { fontFamily: 'System', fontSize: 9, fontWeight: '600', letterSpacing: 1.4, textTransform: 'uppercase', marginBottom: 22 },
+  title: { fontFamily: 'Georgia', fontSize: 36, fontWeight: '300', lineHeight: 40, letterSpacing: -0.8, marginBottom: 26 },
   titleEm: { fontStyle: 'italic' },
 
-  quoteWrap: {
-    flexDirection: 'row', gap: 14, marginBottom: 28,
-    paddingBottom: 28, borderBottomWidth: 1,
-  },
+  quoteWrap: { flexDirection: 'row', gap: 14, marginBottom: 28, paddingBottom: 28, borderBottomWidth: 1 },
   quoteBorder: { width: 1 },
   quote: { flex: 1, fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 13, lineHeight: 22 },
 
@@ -330,19 +367,25 @@ const styles = StyleSheet.create({
   emotionEmoji: { fontSize: 13 },
   emotionLabel: { fontFamily: 'System', fontSize: 10, fontWeight: '500' },
 
-  emotionFooter: { alignItems: 'flex-start' },
+  // Habit tracker
+  habitGrid: { flexDirection: 'column', gap: 10, marginBottom: 20 },
+  habitPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingVertical: 14, paddingHorizontal: 16, borderWidth: 1,
+  },
+  habitEmoji: { fontSize: 18 },
+  habitLabel: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 15, fontWeight: '300', flex: 1 },
+  habitCheck: { width: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  habitCheckMark: { color: '#fff', fontSize: 11, fontWeight: '700' },
+
+  trackFooter: { alignItems: 'flex-start' },
   doneBtn: { borderWidth: 1, paddingHorizontal: 18, paddingVertical: 10 },
   doneBtnText: { fontFamily: 'System', fontSize: 10, fontWeight: '600', letterSpacing: 0.8, textTransform: 'uppercase' },
   savedConfirm: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 13 },
 
   photo: { width: '100%', height: 220, marginBottom: 8 },
   photoHint: { fontFamily: 'System', fontSize: 9, fontStyle: 'italic', marginBottom: 4 },
-
-  photoPlaceholder: {
-    width: '100%', height: 160,
-    borderWidth: 1, borderStyle: 'dashed',
-    alignItems: 'center', justifyContent: 'center', gap: 6,
-  },
+  photoPlaceholder: { width: '100%', height: 160, borderWidth: 1, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', gap: 6 },
   photoPlaceholderIcon: { fontSize: 28 },
   photoPlaceholderText: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 14 },
   photoPlaceholderHint: { fontFamily: 'System', fontSize: 9, letterSpacing: 0.8, textTransform: 'uppercase' },

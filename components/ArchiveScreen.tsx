@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { ThemeContext } from '../context/ThemeContext';
 import { EMOTIONS, EmotionEntry } from '../hooks/useEmotions';
+import { HABITS, HabitEntry } from '../hooks/useHabits';
 import { Thought, UserStats } from '../hooks/useThoughts';
 import { formatDate } from '../constants/data';
 
@@ -15,18 +16,18 @@ interface Props {
   thoughts: Thought[];
   user: UserStats;
   emotionHistory: EmotionEntry[];
+  habitHistory: HabitEntry[];
   onDelete: (id: string) => void;
   getPhotoForDate: (date: string) => string | null;
 }
 
 function dateStr(d: Date) { return d.toISOString().split('T')[0]; }
-
 function friendlyDate(str: string) {
   const d = new Date(str + 'T12:00:00');
   return d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
 }
 
-export default function ArchiveScreen({ thoughts, user, emotionHistory, onDelete, getPhotoForDate }: Props) {
+export default function ArchiveScreen({ thoughts, user, emotionHistory, habitHistory, onDelete, getPhotoForDate }: Props) {
   const { colors } = useContext(ThemeContext);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const today = new Date();
@@ -71,6 +72,12 @@ export default function ArchiveScreen({ thoughts, user, emotionHistory, onDelete
     return map;
   }, [emotionHistory]);
 
+  const habitByDate = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    (habitHistory ?? []).forEach(e => { map[e.date] = e.habits; });
+    return map;
+  }, [habitHistory]);
+
   const thoughtsByDate = useMemo(() => {
     const map: Record<string, Thought[]> = {};
     thoughts.forEach(t => {
@@ -84,6 +91,7 @@ export default function ArchiveScreen({ thoughts, user, emotionHistory, onDelete
   function dayHasActivity(d: string) {
     return (thoughtsByDate[d]?.length ?? 0) > 0
       || (emotionByDate[d]?.length ?? 0) > 0
+      || (habitByDate[d]?.length ?? 0) > 0
       || !!getPhotoForDate(d);
   }
 
@@ -97,6 +105,9 @@ export default function ArchiveScreen({ thoughts, user, emotionHistory, onDelete
   const selectedEmotions = selectedDay ? (emotionByDate[selectedDay] ?? []) : [];
   const selectedEmotionDetails = selectedEmotions
     .map(id => EMOTIONS.find(e => e.id === id)).filter(Boolean) as typeof EMOTIONS;
+  const selectedHabits = selectedDay ? (habitByDate[selectedDay] ?? []) : [];
+  const selectedHabitDetails = selectedHabits
+    .map(id => HABITS.find(h => h.id === id)).filter(Boolean) as typeof HABITS;
   const selectedPhoto = selectedDay ? getPhotoForDate(selectedDay) : null;
 
   function confirmDelete(id: string) {
@@ -169,7 +180,6 @@ export default function ArchiveScreen({ thoughts, user, emotionHistory, onDelete
               const emoji = dayEmotionSample(d);
               const hasPhoto = !!getPhotoForDate(d);
               const thoughtCount = thoughtsByDate[d]?.length ?? 0;
-
               return (
                 <TouchableOpacity
                   key={i}
@@ -183,8 +193,7 @@ export default function ArchiveScreen({ thoughts, user, emotionHistory, onDelete
                   activeOpacity={0.7}
                 >
                   <Text style={[
-                    styles.calDayNum,
-                    { color: colors.muted },
+                    styles.calDayNum, { color: colors.muted },
                     isToday && { color: colors.accent, fontWeight: '700' },
                   ]}>
                     {parseInt(d.split('-')[2])}
@@ -242,11 +251,32 @@ export default function ArchiveScreen({ thoughts, user, emotionHistory, onDelete
               {selectedEmotionDetails.length === 0 ? (
                 <Text style={[styles.modalEmpty, { color: colors.border2 }]}>No emotions logged.</Text>
               ) : (
-                <View style={styles.emotionRow}>
+                <View style={styles.chipRow}>
                   {selectedEmotionDetails.map(e => (
-                    <View key={e.id} style={[styles.emotionChip, { borderColor: colors.accent, backgroundColor: colors.accentL }]}>
-                      <Text style={styles.emotionChipEmoji}>{e.emoji}</Text>
-                      <Text style={[styles.emotionChipLabel, { color: colors.accentD }]}>{e.label}</Text>
+                    <View key={e.id} style={[styles.chip, { borderColor: colors.accent, backgroundColor: colors.accentL }]}>
+                      <Text style={styles.chipEmoji}>{e.emoji}</Text>
+                      <Text style={[styles.chipLabel, { color: colors.accentD }]}>{e.label}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+            {/* Habits */}
+            <View style={styles.modalSection}>
+              <Text style={[styles.modalSectionTitle, { color: colors.bright }]}>
+                Habits <Text style={[styles.modalSectionEm, { color: colors.accent }]}>that day</Text>
+              </Text>
+              {selectedHabitDetails.length === 0 ? (
+                <Text style={[styles.modalEmpty, { color: colors.border2 }]}>No habits logged.</Text>
+              ) : (
+                <View style={styles.habitRow}>
+                  {selectedHabitDetails.map(h => (
+                    <View key={h.id} style={[styles.habitChip, { borderColor: colors.accent, backgroundColor: colors.accentL }]}>
+                      <Text style={styles.chipEmoji}>{h.emoji}</Text>
+                      <Text style={[styles.chipLabel, { color: colors.accentD }]}>{h.label}</Text>
                     </View>
                   ))}
                 </View>
@@ -333,18 +363,19 @@ const styles = StyleSheet.create({
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 },
   modalDate: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 22, fontWeight: '300', flex: 1, letterSpacing: -0.3, lineHeight: 28 },
   modalClose: { fontFamily: 'System', fontSize: 10, fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase', paddingTop: 4 },
-
   modalPhoto: { width: '100%', height: 220, marginBottom: 4 },
-
   modalSection: { marginBottom: 0 },
   modalSectionTitle: { fontFamily: 'Georgia', fontSize: 18, fontWeight: '300', marginBottom: 16 },
   modalSectionEm: { fontStyle: 'italic' },
   modalEmpty: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 13 },
 
-  emotionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  emotionChip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 6, paddingHorizontal: 11, borderWidth: 1 },
-  emotionChipEmoji: { fontSize: 13 },
-  emotionChipLabel: { fontFamily: 'System', fontSize: 10, fontWeight: '500' },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 6, paddingHorizontal: 11, borderWidth: 1 },
+  chipEmoji: { fontSize: 13 },
+  chipLabel: { fontFamily: 'System', fontSize: 10, fontWeight: '500' },
+
+  habitRow: { flexDirection: 'column', gap: 8 },
+  habitChip: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, paddingHorizontal: 14, borderWidth: 1 },
 
   thoughtEntry: { paddingVertical: 16, borderTopWidth: 1 },
   thoughtMeta: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 7 },

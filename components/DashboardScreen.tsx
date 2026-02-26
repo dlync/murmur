@@ -9,6 +9,8 @@ import { TAGS, getDailyQuote } from '../constants/data';
 import { Thought, UserStats } from '../hooks/useThoughts';
 import { EMOTIONS } from '../hooks/useEmotions';
 import { HABITS } from '../hooks/useHabits';
+import { VoiceNote } from '../hooks/useVoiceNotes';
+import { VoiceNoteRecorder, VoiceNotePlayback } from './VoiceNoteRecorder';
 
 interface Props {
   thoughts: Thought[];
@@ -25,6 +27,9 @@ interface Props {
   onToggleHabit: (id: string) => void;
   onConfirmHabitSave: (habits: string[]) => Promise<void>;
   habitsSaved: boolean;
+  todayVoiceNotes: VoiceNote[];
+  onAddVoiceNote: (uri: string, durationMs: number) => Promise<void>;
+  onDeleteVoiceNote: (id: string) => Promise<void>;
 }
 
 export default function DashboardScreen({
@@ -32,6 +37,7 @@ export default function DashboardScreen({
   todayEmotions, onToggleEmotion, onConfirmSave, emotionsSaved,
   todayPhoto, onSavePhoto, onRemovePhoto,
   todayHabits, onToggleHabit, onConfirmHabitSave, habitsSaved,
+  todayVoiceNotes, onAddVoiceNote, onDeleteVoiceNote,
 }: Props) {
   const { colors } = useContext(ThemeContext);
   const [body, setBody] = useState('');
@@ -331,6 +337,26 @@ export default function DashboardScreen({
             )}
           </View>
 
+          <View style={[styles.divider, { backgroundColor: colors.bright }]} />
+
+          {/* Voice notes */}
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.bright }]}>
+              Today's <Text style={[styles.sectionTitleEm, { color: colors.accent }]}>voice.</Text>
+            </Text>
+            {todayVoiceNotes.map(note => (
+              <View key={note.id} style={styles.voiceNoteItem}>
+                <VoiceNotePlayback
+                  note={note}
+                  onDelete={() => onDeleteVoiceNote(note.id)}
+                />
+              </View>
+            ))}
+            <View style={todayVoiceNotes.length > 0 ? styles.voiceNoteSpacing : undefined}>
+              <VoiceNoteRecorder onSave={onAddVoiceNote} />
+            </View>
+          </View>
+
         </Animated.View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -405,9 +431,10 @@ const styles = StyleSheet.create({
   doneBtnText: { fontFamily: 'System', fontSize: 10, fontWeight: '600', letterSpacing: 0.8, textTransform: 'uppercase' },
   savedConfirm: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 13 },
 
-  photo: { width: '100%', height: 220, marginBottom: 8 },
-  photoHint: { fontFamily: 'System', fontSize: 9, fontStyle: 'italic', marginBottom: 4 },
-  photoPlaceholder: { width: '100%', height: 160, borderWidth: 1, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  voiceNoteItem: { marginBottom: 8 },
+  voiceNoteSpacing: { marginTop: 8 },
+  photoHint: { fontFamily: 'System', fontSize: 9, fontStyle: 'italic', marginBottom: 24 },
+  photoPlaceholder: { width: '100%', height: 160, borderWidth: 1, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 24 },
   photoPlaceholderIcon: { fontSize: 28 },
   photoPlaceholderText: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 14 },
   photoPlaceholderHint: { fontFamily: 'System', fontSize: 9, letterSpacing: 0.8, textTransform: 'uppercase' },

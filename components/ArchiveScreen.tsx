@@ -8,6 +8,8 @@ import { ThemeContext } from '../context/ThemeContext';
 import { EMOTIONS, EmotionEntry } from '../hooks/useEmotions';
 import { HABITS, HabitEntry } from '../hooks/useHabits';
 import { CalendarEvent } from '../hooks/useEvents';
+import { VoiceNote } from '../hooks/useVoiceNotes';
+import { VoiceNotePlayback } from './VoiceNoteRecorder';
 import { Thought, UserStats } from '../hooks/useThoughts';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -24,6 +26,9 @@ interface Props {
   onAddEvent: (date: string, title: string, note?: string) => Promise<CalendarEvent>;
   onDeleteEvent: (id: string) => Promise<void>;
   onUpdateEvent: (id: string, title: string, note?: string) => Promise<void>;
+  getVoiceNotesForDate: (date: string) => VoiceNote[];
+  voiceNotes: VoiceNote[];
+  onDeleteVoiceNote: (id: string) => Promise<void>;
 }
 
 function dateStr(d: Date) { return d.toISOString().split('T')[0]; }
@@ -33,19 +38,19 @@ function friendlyDate(str: string) {
 }
 function isFuture(str: string) { return str > dateStr(new Date()); }
 function isTodayOrFuture(str: string) { return str >= dateStr(new Date()); }
+function plural(n: number, singular: string, pluralStr: string) {
+  return n === 1 ? singular : pluralStr;
+}
 
-// Build a grid for a given year/month — returns array of date strings or null (padding)
 function buildMonthGrid(year: number, month: number): (string | null)[] {
   const firstDay = new Date(year, month, 1);
   const lastDay = new Date(year, month + 1, 0);
-  // Mon=0 … Sun=6
   const startOffset = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1;
   const grid: (string | null)[] = Array(startOffset).fill(null);
   for (let d = 1; d <= lastDay.getDate(); d++) {
     const date = new Date(year, month, d);
     grid.push(dateStr(date));
   }
-  // pad to complete last row
   while (grid.length % 7 !== 0) grid.push(null);
   return grid;
 }
@@ -59,6 +64,7 @@ const DOW = ['M','T','W','T','F','S','S'];
 export default function ArchiveScreen({
   events = [], thoughts, user, emotionHistory, habitHistory, onDelete,
   getPhotoForDate, onAddEvent, onDeleteEvent, onUpdateEvent,
+  getVoiceNotesForDate, voiceNotes = [], onDeleteVoiceNote,
 }: Props) {
   const { colors } = useContext(ThemeContext);
 
@@ -107,6 +113,25 @@ export default function ArchiveScreen({
 
   const maxEmotionCount = Math.max(...last7Emotions.map(e => e.count), 1);
 
+  const weekStats = useMemo(() => {
+    const cutoff = new Date(today);
+    cutoff.setDate(today.getDate() - 6);
+    const cutoffStr = dateStr(cutoff);
+    const last7Dates: string[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      last7Dates.push(dateStr(d));
+    }
+    const photos = last7Dates.filter(d => !!getPhotoForDate(d)).length;
+    const notes = (voiceNotes ?? []).filter(n => n.date >= cutoffStr).length;
+    const habitCounts: Record<string, number> = {};
+    (habitHistory ?? []).filter(e => e.date >= cutoffStr).forEach(e => {
+      e.habits.forEach(id => { habitCounts[id] = (habitCounts[id] ?? 0) + 1; });
+    });
+    return { photos, notes, habitCounts };
+  }, [voiceNotes, habitHistory, getPhotoForDate]);
+
   const emotionByDate = useMemo(() => {
     const map: Record<string, string[]> = {};
     (emotionHistory ?? []).forEach(e => { map[e.date] = e.emotions; });
@@ -134,12 +159,6 @@ export default function ArchiveScreen({
       || (emotionByDate[d]?.length ?? 0) > 0
       || (habitByDate[d]?.length ?? 0) > 0
       || !!getPhotoForDate(d);
-  }
-
-  function dayEmotionSample(d: string): string | null {
-    const ids = emotionByDate[d];
-    if (!ids?.length) return null;
-    return EMOTIONS.find(e => e.id === ids[0])?.emoji ?? null;
   }
 
   function handleDayPress(d: string) {
@@ -209,6 +228,7 @@ export default function ArchiveScreen({
     .map(id => HABITS.find(h => h.id === id)).filter(Boolean) as typeof HABITS;
   const selectedPhoto = selectedDay ? getPhotoForDate(selectedDay) : null;
   const selectedEvents = selectedDay ? getEventsForDate(selectedDay) : [];
+  const selectedVoiceNotes = selectedDay ? getVoiceNotesForDate(selectedDay) : [];
 
   return (
     <View style={[styles.root, { backgroundColor: colors.bg }]}>
@@ -220,6 +240,66 @@ export default function ArchiveScreen({
             <Text style={[styles.pageTitleEm, { color: colors.accent }]}>{user.username}</Text>
           </Text>
           <Text style={[styles.pageSubtitle, { color: colors.bright }]}>your story, in numbers</Text>
+
+          <View style={[styles.divider, { backgroundColor: colors.bright }]} />
+
+          {/* Weekly stats strip */}
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.bright }]}>
+              This <Text style={[styles.sectionTitleEm, { color: colors.accent }]}>week</Text>
+            </Text>
+            <View style={styles.weekStatsGrid}>
+
+              <View style={[styles.weekStatCell, { borderColor: colors.bright }]}>
+                <Text style={styles.weekStatEmoji}>📷</Text>
+                <Text style={[styles.weekStatNum, { color: colors.accent }]}>{weekStats.photos}</Text>
+                <Text style={[styles.weekStatLabel, { color: colors.bright }]}>
+                  {plural(weekStats.photos, 'photo', 'photos')}
+                </Text>
+              </View>
+
+              <View style={[styles.weekStatCell, { borderColor: colors.bright }]}>
+                <Text style={styles.weekStatEmoji}>🎙</Text>
+                <Text style={[styles.weekStatNum, { color: colors.accent }]}>{weekStats.notes}</Text>
+                <Text style={[styles.weekStatLabel, { color: colors.bright }]}>
+                  {plural(weekStats.notes, 'voice note', 'voice notes')}
+                </Text>
+              </View>
+
+              <View style={[styles.weekStatCell, { borderColor: colors.bright }]}>
+                <Text style={styles.weekStatEmoji}>🏃</Text>
+                <Text style={[styles.weekStatNum, { color: colors.accent }]}>{weekStats.habitCounts['exercise'] ?? 0}</Text>
+                <Text style={[styles.weekStatLabel, { color: colors.bright }]}>
+                  {plural(weekStats.habitCounts['exercise'] ?? 0, 'workout', 'workouts')}
+                </Text>
+              </View>
+
+              <View style={[styles.weekStatCell, { borderColor: colors.bright }]}>
+                <Text style={styles.weekStatEmoji}>📖</Text>
+                <Text style={[styles.weekStatNum, { color: colors.accent }]}>{weekStats.habitCounts['reading'] ?? 0}</Text>
+                <Text style={[styles.weekStatLabel, { color: colors.bright }]}>
+                  {plural(weekStats.habitCounts['reading'] ?? 0, 'reading day', 'reading days')}
+                </Text>
+              </View>
+
+              <View style={[styles.weekStatCell, { borderColor: colors.bright }]}>
+                <Text style={styles.weekStatEmoji}>🥗</Text>
+                <Text style={[styles.weekStatNum, { color: colors.accent }]}>{weekStats.habitCounts['diet'] ?? 0}</Text>
+                <Text style={[styles.weekStatLabel, { color: colors.bright }]}>
+                  {plural(weekStats.habitCounts['diet'] ?? 0, 'good eat', 'good eats')}
+                </Text>
+              </View>
+
+              <View style={[styles.weekStatCell, { borderColor: colors.bright }]}>
+                <Text style={styles.weekStatEmoji}>😴</Text>
+                <Text style={[styles.weekStatNum, { color: colors.accent }]}>{weekStats.habitCounts['sleep'] ?? 0}</Text>
+                <Text style={[styles.weekStatLabel, { color: colors.bright }]}>
+                  {plural(weekStats.habitCounts['sleep'] ?? 0, 'good sleep', 'good sleeps')}
+                </Text>
+              </View>
+
+            </View>
+          </View>
 
           <View style={[styles.divider, { backgroundColor: colors.bright }]} />
 
@@ -254,12 +334,10 @@ export default function ArchiveScreen({
               Your <Text style={[styles.sectionTitleEm, { color: colors.accent }]}>calendar</Text>
             </Text>
 
-            {/* Month nav */}
             <View style={styles.monthNav}>
               <TouchableOpacity onPress={prevMonth} style={styles.monthNavBtn} activeOpacity={0.7}>
                 <Text style={[styles.monthNavArrow, { color: colors.bright }]}>←</Text>
               </TouchableOpacity>
-
               <TouchableOpacity onPress={goToday} activeOpacity={0.7} style={styles.monthTitleWrap}>
                 <Text style={[styles.monthTitle, { color: colors.bright }]}>
                   {MONTH_NAMES[calMonth]}{' '}
@@ -269,29 +347,24 @@ export default function ArchiveScreen({
                   <Text style={[styles.todayHint, { color: colors.accent }]}>Tap to return to today</Text>
                 )}
               </TouchableOpacity>
-
               <TouchableOpacity onPress={nextMonth} style={styles.monthNavBtn} activeOpacity={0.7}>
                 <Text style={[styles.monthNavArrow, { color: colors.bright }]}>→</Text>
               </TouchableOpacity>
             </View>
 
-            {/* Day of week headers */}
             <View style={styles.dowRow}>
               {DOW.map((d, i) => (
                 <Text key={i} style={[styles.dowLabel, { color: colors.bright }]}>{d}</Text>
               ))}
             </View>
 
-            {/* Calendar grid */}
             <View style={styles.calGrid}>
               {calGrid.map((d, i) => {
                 if (!d) return <View key={i} style={styles.calCellEmpty} />;
-
                 const isToday = d === dateStr(today);
                 const future = isFuture(d);
                 const hasData = !future && dayHasActivity(d);
                 const hasEvents = hasEventOnDate(d);
-
                 return (
                   <TouchableOpacity
                     key={i}
@@ -320,7 +393,6 @@ export default function ArchiveScreen({
               })}
             </View>
 
-            {/* Legend */}
             <View style={styles.legend}>
               <View style={styles.legendItem}>
                 <View style={[styles.legendDot, { backgroundColor: colors.bright }]} />
@@ -337,7 +409,7 @@ export default function ArchiveScreen({
                 <Text style={[styles.legendText, { color: colors.bright }]}>Today</Text>
               </View>
               <View style={styles.legendItem}>
-                <Text style={[styles.legendText, { color: colors.bright, opacity: 0.5 }]}>dots: top = log · bottom = event</Text>
+                <Text style={[styles.legendText, { color: colors.bright, opacity: 0.5 }]}>dots: left = log · right = event</Text>
               </View>
             </View>
           </View>
@@ -345,7 +417,7 @@ export default function ArchiveScreen({
         </Animated.View>
       </ScrollView>
 
-      {/* Day modal — sibling of ScrollView */}
+      {/* Day modal */}
       <Modal
         visible={!!selectedDay}
         animationType="slide"
@@ -376,7 +448,7 @@ export default function ArchiveScreen({
 
             <View style={[styles.divider, { backgroundColor: colors.bright }]} />
 
-            {/* FUTURE DAY */}
+            {/* FUTURE / TODAY — events panel */}
             {selectedIsFuture && (
               <View style={styles.modalSection}>
                 <Text style={[styles.modalSectionTitle, { color: colors.bright }]}>
@@ -456,7 +528,7 @@ export default function ArchiveScreen({
               </View>
             )}
 
-            {/* PAST / TODAY */}
+            {/* PAST */}
             {!selectedIsFuture && (
               <>
                 {selectedEvents.length > 0 && (
@@ -534,7 +606,7 @@ export default function ArchiveScreen({
                   <Text style={[styles.modalSectionTitle, { color: colors.bright }]}>
                     {selectedThoughts.length}{' '}
                     <Text style={[styles.modalSectionEm, { color: colors.accent }]}>
-                      {selectedThoughts.length === 1 ? 'thought' : 'thoughts'}
+                      {plural(selectedThoughts.length, 'thought', 'thoughts')}
                     </Text>
                   </Text>
                   {selectedThoughts.length === 0 ? (
@@ -561,6 +633,25 @@ export default function ArchiveScreen({
                     <Text style={[styles.deleteHint, { color: colors.bright }]}>Long-press a thought to delete</Text>
                   )}
                 </View>
+
+                {selectedVoiceNotes.length > 0 && (
+                  <>
+                    <View style={[styles.divider, { backgroundColor: colors.bright }]} />
+                    <View style={styles.modalSection}>
+                      <Text style={[styles.modalSectionTitle, { color: colors.bright }]}>
+                        Voice <Text style={[styles.modalSectionEm, { color: colors.accent }]}>notes</Text>
+                      </Text>
+                      {selectedVoiceNotes.map(note => (
+                        <View key={note.id} style={styles.voiceNoteItem}>
+                          <VoiceNotePlayback
+                            note={note}
+                            onDelete={() => onDeleteVoiceNote(note.id)}
+                          />
+                        </View>
+                      ))}
+                    </View>
+                  </>
+                )}
               </>
             )}
           </ScrollView>
@@ -586,6 +677,12 @@ const styles = StyleSheet.create({
   sectionTitleEm: { fontStyle: 'italic' },
   emptyText: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 13 },
 
+  weekStatsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  weekStatCell: { width: '30%', flexGrow: 1, borderWidth: 1, paddingVertical: 14, paddingHorizontal: 10, alignItems: 'center', gap: 4 },
+  weekStatEmoji: { fontSize: 18 },
+  weekStatNum: { fontFamily: 'Georgia', fontSize: 24, fontWeight: '300', lineHeight: 28 },
+  weekStatLabel: { fontFamily: 'System', fontSize: 8, fontWeight: '600', letterSpacing: 0.8, textTransform: 'uppercase', textAlign: 'center' },
+
   barChart: { gap: 12 },
   barRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   barEmoji: { fontSize: 15, width: 22 },
@@ -594,11 +691,7 @@ const styles = StyleSheet.create({
   barLabel: { fontFamily: 'System', fontSize: 10, fontWeight: '500', width: 68 },
   barCount: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 12, width: 20, textAlign: 'right' },
 
-  // Month navigation
-  monthNav: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    marginBottom: 18,
-  },
+  monthNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 },
   monthNavBtn: { padding: 8 },
   monthNavArrow: { fontFamily: 'System', fontSize: 18, fontWeight: '300' },
   monthTitleWrap: { alignItems: 'center', flex: 1 },
@@ -606,7 +699,6 @@ const styles = StyleSheet.create({
   monthTitleYear: { fontStyle: 'italic' },
   todayHint: { fontFamily: 'System', fontSize: 8, fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase', marginTop: 3 },
 
-  // Calendar grid
   dowRow: { flexDirection: 'row', marginBottom: 6 },
   dowLabel: { width: DAY_SIZE, textAlign: 'center', fontFamily: 'System', fontSize: 9, fontWeight: '600', letterSpacing: 0.5 },
   calGrid: { flexDirection: 'row', flexWrap: 'wrap' },
@@ -617,15 +709,13 @@ const styles = StyleSheet.create({
   calDot: { width: 4, height: 4, borderRadius: 2 },
   calDotPlaceholder: { width: 4, height: 4 },
 
-  // Legend
-  legend: { flexDirection: 'row', gap: 18, marginTop: 14 },
+  legend: { flexDirection: 'row', gap: 18, marginTop: 14, flexWrap: 'wrap' },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   legendDot: { width: 8, height: 8, borderRadius: 4 },
   legendCell: { width: 16, height: 16, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
   legendCellNum: { fontFamily: 'System', fontSize: 8, fontWeight: '700' },
   legendText: { fontFamily: 'System', fontSize: 9, fontWeight: '500', letterSpacing: 0.3 },
 
-  // Modal
   modal: { flex: 1 },
   modalContent: { paddingHorizontal: 28, paddingTop: 28, paddingBottom: 60 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 },
@@ -673,4 +763,5 @@ const styles = StyleSheet.create({
   thoughtTag: { fontFamily: 'System', fontSize: 9, fontWeight: '600', letterSpacing: 0.8, textTransform: 'uppercase' },
   thoughtBody: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 15, lineHeight: 25 },
   deleteHint: { fontFamily: 'System', fontSize: 9, fontStyle: 'italic', textAlign: 'center', marginTop: 20 },
+  voiceNoteItem: { marginBottom: 8 },
 });

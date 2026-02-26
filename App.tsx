@@ -8,12 +8,13 @@ import { useEmotions } from './hooks/useEmotions';
 import { usePhotos } from './hooks/usePhotos';
 import { useHabits } from './hooks/useHabits';
 import { useEvents } from './hooks/useEvents';
+import { useVoiceNotes } from './hooks/useVoiceNotes';
 import DashboardScreen from './components/DashboardScreen';
 import ArchiveScreen from './components/ArchiveScreen';
 import ProfileScreen from './components/ProfileScreen';
 
 type Tab = 'today' | 'archive' | 'profile';
-type ThemeKey = 'linen' | 'dusk' | 'sage' | 'slate' | 'parchment' | 'midnight' | 'rose' | 'forest' | 'chalk';
+type ThemeKey = 'linen' | 'sage' | 'slate' | 'parchment' | 'rose' | 'chalk' | 'ember' | 'pine' | 'noir';
 
 function Inner() {
   const [activeTab, setActiveTab] = React.useState<Tab>('today');
@@ -26,6 +27,7 @@ function Inner() {
   const { todayPhoto, savePhoto, removePhoto, getPhotoForDate } = usePhotos();
   const { todayHabits, toggleHabit, confirmSave: confirmHabitSave, history: habitHistory, saved: habitsSaved } = useHabits();
   const { events, addEvent, deleteEvent, updateEvent, getEventsForDate } = useEvents();
+  const { notes: voiceNotes, addNote, deleteNote, getNotesForDate } = useVoiceNotes();
 
   if (loading) {
     return (
@@ -39,7 +41,7 @@ function Inner() {
     <ThemeContext.Provider value={{ themeKey, colors, setTheme }}>
       <SafeAreaView style={[styles.root, { backgroundColor: colors.bg }]} edges={['top', 'left', 'right']}>
         <StatusBar
-          barStyle={themeKey === 'dusk' || themeKey === 'midnight' || themeKey === 'forest' ? 'light-content' : 'dark-content'}
+          barStyle={themeKey === 'ember' || themeKey === 'pine' || themeKey === 'noir' ? 'light-content' : 'dark-content'}
           backgroundColor={colors.bg}
         />
         <View style={[styles.header, { backgroundColor: colors.bg, borderBottomColor: colors.border }]}>
@@ -64,6 +66,9 @@ function Inner() {
               onToggleHabit={toggleHabit}
               onConfirmHabitSave={confirmHabitSave}
               habitsSaved={habitsSaved}
+              todayVoiceNotes={getNotesForDate(new Date().toISOString().split('T')[0])}
+              onAddVoiceNote={(uri, ms) => addNote(new Date().toISOString().split('T')[0], uri, ms)}
+              onDeleteVoiceNote={deleteNote}
             />
           )}
           {activeTab === 'archive' && (
@@ -79,6 +84,9 @@ function Inner() {
               onDeleteEvent={deleteEvent}
               onUpdateEvent={updateEvent}
               getEventsForDate={getEventsForDate}
+              getVoiceNotesForDate={getNotesForDate}
+              voiceNotes={voiceNotes}
+              onDeleteVoiceNote={deleteNote}
             />
           )}
           {activeTab === 'profile' && (

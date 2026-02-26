@@ -24,6 +24,14 @@
       "output": "single"
     },
     "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#5E7A8A",
+          "sounds": []
+        }
+      ]
     ],
     "newArchEnabled": true
   }

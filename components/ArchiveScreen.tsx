@@ -10,6 +10,7 @@ import { HABITS, HabitEntry } from '../hooks/useHabits';
 import { CalendarEvent } from '../hooks/useEvents';
 import { VoiceNote } from '../hooks/useVoiceNotes';
 import { VoiceNotePlayback } from './VoiceNoteRecorder';
+import { FormattedText } from './FormattedText';
 import { Thought, UserStats } from '../hooks/useThoughts';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -31,7 +32,12 @@ interface Props {
   onDeleteVoiceNote: (id: string) => Promise<void>;
 }
 
-function dateStr(d: Date) { return d.toISOString().split('T')[0]; }
+function dateStr(d: Date) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
 function friendlyDate(str: string) {
   const d = new Date(str + 'T12:00:00');
   return d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -154,6 +160,30 @@ export default function ArchiveScreen({
     return map;
   }, [thoughts]);
 
+  function stripHtml(html: string): string {
+    return html
+      .replace(/<br\s*\/?>/gi, ' ')
+      .replace(/<\/div>/gi, ' ')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&nbsp;/g, ' ')
+      .trim();
+  }
+
+  const longestThought = useMemo(() => {
+    const cutoff = new Date(today);
+    cutoff.setDate(today.getDate() - 6);
+    const cutoffStr = dateStr(cutoff);
+    const weekThoughts = thoughts.filter(t => t.timestamp.split('T')[0] >= cutoffStr);
+    if (!weekThoughts.length) return null;
+    return weekThoughts.reduce((best, t) =>
+      stripHtml(t.body).length > stripHtml(best.body).length ? t : best
+    );
+  }, [thoughts]);
+
+  const longestWordCount = longestThought
+    ? stripHtml(longestThought.body).split(/\s+/).filter(Boolean).length
+    : 0;
+
   function dayHasActivity(d: string) {
     return (thoughtsByDate[d]?.length ?? 0) > 0
       || (emotionByDate[d]?.length ?? 0) > 0
@@ -239,7 +269,7 @@ export default function ArchiveScreen({
           <Text style={[styles.pageTitle, { color: colors.bright }]}>
             <Text style={[styles.pageTitleEm, { color: colors.accent }]}>{user.username}</Text>
           </Text>
-          <Text style={[styles.pageSubtitle, { color: colors.bright }]}>your story, in numbers</Text>
+          <Text style={[styles.pageSubtitle, { color: colors.bright }]}>your week, in numbers</Text>
 
           <View style={[styles.divider, { backgroundColor: colors.bright }]} />
 
@@ -299,6 +329,34 @@ export default function ArchiveScreen({
               </View>
 
             </View>
+          </View>
+
+          <View style={[styles.divider, { backgroundColor: colors.bright }]} />
+
+          {/* Longest entry */}
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.bright }]}>
+              Longest <Text style={[styles.sectionTitleEm, { color: colors.accent }]}>this week</Text>
+            </Text>
+            {longestThought ? (
+              <View style={[styles.longestCard, { borderColor: colors.bright }]}>
+                <View style={styles.longestMeta}>
+                  <Text style={[styles.longestNum, { color: colors.accent }]}>{longestWordCount}</Text>
+                  <Text style={[styles.longestUnits, { color: colors.bright }]}> words</Text>
+                  <Text style={[styles.longestDate, { color: colors.bright }]}>
+                    {'  '}
+                    {new Date(longestThought.timestamp).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </Text>
+                </View>
+                <FormattedText
+                  text={longestThought.body}
+                  style={[styles.longestExcerpt, { color: colors.bright }]}
+                  numberOfLines={3}
+                />
+              </View>
+            ) : (
+              <Text style={[styles.emptyText, { color: colors.bright }]}>No entries written this week yet.</Text>
+            )}
           </View>
 
           <View style={[styles.divider, { backgroundColor: colors.bright }]} />
@@ -623,9 +681,8 @@ export default function ArchiveScreen({
                           <Text style={[styles.thoughtTime, { color: colors.bright }]}>
                             {new Date(t.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
                           </Text>
-                          {t.tag ? <Text style={[styles.thoughtTag, { color: colors.accent }]}>{t.tag}</Text> : null}
                         </View>
-                        <Text style={[styles.thoughtBody, { color: colors.bright }]}>{t.body}</Text>
+                        <FormattedText text={t.body} style={[styles.thoughtBody, { color: colors.bright }]} />
                       </TouchableOpacity>
                     ))
                   )}
@@ -757,10 +814,16 @@ const styles = StyleSheet.create({
   habitRow: { flexDirection: 'column', gap: 8 },
   habitChip: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, paddingHorizontal: 14 },
 
+  longestCard: { borderWidth: 1, padding: 16, gap: 10 },
+  longestMeta: { flexDirection: 'row', alignItems: 'baseline' },
+  longestNum: { fontFamily: 'Georgia', fontSize: 28, fontWeight: '300', lineHeight: 32 },
+  longestUnits: { fontFamily: 'System', fontSize: 8, fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase' },
+  longestDate: { fontFamily: 'System', fontSize: 8, fontWeight: '400', letterSpacing: 0.6, opacity: 0.5 },
+  longestExcerpt: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 14, lineHeight: 24 },
+
   thoughtEntry: { paddingVertical: 16, borderTopWidth: 1 },
   thoughtMeta: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 7 },
   thoughtTime: { fontFamily: 'System', fontSize: 9, fontWeight: '600', letterSpacing: 0.9, textTransform: 'uppercase' },
-  thoughtTag: { fontFamily: 'System', fontSize: 9, fontWeight: '600', letterSpacing: 0.8, textTransform: 'uppercase' },
   thoughtBody: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 15, lineHeight: 25 },
   deleteHint: { fontFamily: 'System', fontSize: 9, fontStyle: 'italic', textAlign: 'center', marginTop: 20 },
   voiceNoteItem: { marginBottom: 8 },

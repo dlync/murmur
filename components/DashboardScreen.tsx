@@ -1,16 +1,19 @@
 import React, { useState, useRef, useEffect, useContext } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, ScrollView, Image,
-  StyleSheet, KeyboardAvoidingView, Platform, Alert, Animated,
+  View, Text, TouchableOpacity, ScrollView, Image,
+  StyleSheet, KeyboardAvoidingView, Platform, Alert, Animated, Modal,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { ThemeContext } from '../context/ThemeContext';
-import { TAGS, getDailyQuote } from '../constants/data';
+import { getDailyQuote } from '../constants/data';
 import { Thought, UserStats } from '../hooks/useThoughts';
 import { EMOTIONS } from '../hooks/useEmotions';
 import { HABITS } from '../hooks/useHabits';
 import { VoiceNote } from '../hooks/useVoiceNotes';
 import { VoiceNoteRecorder, VoiceNotePlayback } from './VoiceNoteRecorder';
+import { FormattedText } from './FormattedText';
+import { RichTextEditor } from './RichTextEditor';
 
 interface Props {
   thoughts: Thought[];
@@ -40,9 +43,10 @@ export default function DashboardScreen({
   todayVoiceNotes, onAddVoiceNote, onDeleteVoiceNote,
 }: Props) {
   const { colors } = useContext(ThemeContext);
+  const insets = useSafeAreaInsets();
   const [body, setBody] = useState('');
-  const [activeTag, setActiveTag] = useState('');
   const [saving, setSaving] = useState(false);
+  const [editorOpen, setEditorOpen] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const quote = getDailyQuote();
 
@@ -51,13 +55,22 @@ export default function DashboardScreen({
   }, []);
 
   async function handleSave() {
-    const trimmed = body.trim();
+    const trimmed = htmlToText(body).trim();
     if (!trimmed) { Alert.alert('Empty entry', 'Write something before saving.'); return; }
     setSaving(true);
-    await onAdd(trimmed, activeTag);
+    await onAdd(body, '');
     setBody('');
-    setActiveTag('');
     setSaving(false);
+  }
+
+  // Strip HTML tags to get plain text (used for empty-check and save button state)
+  function htmlToText(html: string): string {
+    return html
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/div>/gi, '\n')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+      .replace(/&nbsp;/g, ' ');
   }
 
   async function handlePickPhoto() {
@@ -108,6 +121,8 @@ export default function DashboardScreen({
   const today = new Date().toLocaleDateString('en-GB', {
     weekday: 'long', day: 'numeric', month: 'long',
   });
+  const streakPosition = user.streak === 0 ? 0 : ((user.streak - 1) % 7) + 1;
+  const streakCycle = user.streak === 0 ? 0 : Math.ceil(user.streak / 7);
 
   return (
     <KeyboardAvoidingView style={[styles.root, { backgroundColor: colors.bg }]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
@@ -130,72 +145,50 @@ export default function DashboardScreen({
             <Text style={[styles.quote, { color: colors.bright }]}>"{quote}"</Text>
           </View>
 
-          <View style={styles.statsRow}>
-            <View style={styles.stat}>
-              <Text style={[styles.statNum, { color: colors.accent }]}>{user.streak}</Text>
-              <Text style={[styles.statLabel, { color: colors.bright }]}>Streak</Text>
+          {/* Streak bar */}
+          <View style={styles.streakWrap}>
+            <View style={styles.streakHeader}>
+              <Text style={[styles.streakCount, { color: colors.accent }]}>{user.streak}</Text>
+              <Text style={[styles.streakLabel, { color: colors.bright }]}> day streak</Text>
+              {streakCycle > 1 && (
+                <Text style={[styles.streakCycle, { color: colors.muted }]}> · cycle {streakCycle}</Text>
+              )}
             </View>
-            <View style={styles.stat}>
-              <Text style={[styles.statNum, { color: colors.bright }]}>{user.thoughtsToday}</Text>
-              <Text style={[styles.statLabel, { color: colors.bright }]}>Today</Text>
+            <View style={styles.streakSegments}>
+              {Array.from({ length: 7 }, (_, i) => (
+                <View
+                  key={i}
+                  style={[
+                    styles.streakSegment,
+                    { backgroundColor: (i + 1) <= streakPosition ? colors.accent : colors.surface2 },
+                  ]}
+                />
+              ))}
             </View>
-            <View style={styles.stat}>
-              <Text style={[styles.statNum, { color: colors.bright }]}>{user.thoughtsTotal}</Text>
-              <Text style={[styles.statLabel, { color: colors.bright }]}>Total</Text>
-            </View>
+            <Text style={[styles.streakDayHint, { color: colors.muted }]}>
+              {user.streak === 0 ? 'Start your streak — write today' : `Day ${streakPosition} of 7`}
+            </Text>
           </View>
 
           <View style={[styles.divider, { backgroundColor: colors.bright }]} />
 
-          {/* Tag pills */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}
-            style={styles.tagScroll} contentContainerStyle={styles.tagContainer}>
-            {TAGS.map((tag) => (
-              <TouchableOpacity
-                key={tag}
-                style={[
-                  styles.tagPill,
-                  { borderColor: 'transparent', backgroundColor: colors.bg },
-                  activeTag === tag && { borderColor: colors.accent },
-                ]}
-                onPress={() => setActiveTag(activeTag === tag ? '' : tag)}
-                activeOpacity={0.7}
-              >
-                <Text style={[
-                  styles.tagText, { color: colors.bright },
-                  activeTag === tag && { color: colors.accent },
-                ]}>{tag}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-
-          <TextInput
-            style={[styles.textarea, { color: colors.text }]}
-            multiline
-            placeholder="Begin anywhere. There's no wrong way in…"
-            placeholderTextColor={colors.bright}
-            value={body}
-            onChangeText={setBody}
-            textAlignVertical="top"
-          />
-          <View style={[styles.textareaBorder, { backgroundColor: colors.bright }]} />
-
-          <View style={styles.composeFooter}>
-            <TouchableOpacity
-              style={[
-                styles.saveBtn, { backgroundColor: colors.accent },
-                (!body.trim() || saving) && { backgroundColor: colors.border2 },
-              ]}
-              onPress={handleSave}
-              disabled={saving || !body.trim()}
-              activeOpacity={0.8}
-            >
-              <Text style={[styles.saveBtnText, { color: colors.white }]}>
-                {saving ? 'Saving…' : 'Save entry'}
+          <TouchableOpacity
+            style={[styles.composeTrigger, { borderColor: colors.bright }]}
+            onPress={() => setEditorOpen(true)}
+            activeOpacity={0.7}
+          >
+            {htmlToText(body).trim() ? (
+              <FormattedText
+                text={body}
+                style={[styles.composeTriggerText, { color: colors.text }]}
+                numberOfLines={2}
+              />
+            ) : (
+              <Text style={[styles.composeTriggerText, { color: colors.bright }]} numberOfLines={2}>
+                {'Begin anywhere. There\'s no wrong way in…'}
               </Text>
-            </TouchableOpacity>
-            <Text style={[styles.charCount, { color: colors.bright }]}>{body.length} / ∞</Text>
-          </View>
+            )}
+          </TouchableOpacity>
 
           <View style={[styles.divider, { backgroundColor: colors.bright }]} />
 
@@ -359,6 +352,39 @@ export default function DashboardScreen({
 
         </Animated.View>
       </ScrollView>
+
+      {/* Full-screen writing modal */}
+      <Modal
+        visible={editorOpen}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={() => setEditorOpen(false)}
+      >
+        <SafeAreaView style={[styles.editorModal, { backgroundColor: colors.bg }]} edges={['bottom']}>
+          <View style={[styles.editorHeader, { borderBottomColor: colors.bright, paddingTop: insets.top + 12 }]}>
+            <TouchableOpacity onPress={() => setEditorOpen(false)} activeOpacity={0.7}>
+              <Text style={[styles.editorCancel, { color: colors.bright }]}>Cancel</Text>
+            </TouchableOpacity>
+            <Text style={[styles.editorTitle, { color: colors.bright }]}>{today}</Text>
+            <TouchableOpacity
+              onPress={async () => { await handleSave(); setEditorOpen(false); }}
+              disabled={saving || !htmlToText(body).trim()}
+              activeOpacity={0.8}
+            >
+              <Text style={[
+                styles.editorSave,
+                { color: colors.accent },
+                (!htmlToText(body).trim() || saving) && { opacity: 0.3 },
+              ]}>
+                {saving ? 'Saving…' : 'Save'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <RichTextEditor value={body} onChangeValue={setBody} />
+        </SafeAreaView>
+      </Modal>
+
     </KeyboardAvoidingView>
   );
 }
@@ -372,36 +398,35 @@ const styles = StyleSheet.create({
   title: { fontFamily: 'Georgia', fontSize: 36, fontWeight: '300', lineHeight: 40, letterSpacing: -0.8, marginBottom: 26 },
   titleEm: { fontStyle: 'italic' },
 
-  quoteWrap: { flexDirection: 'row', gap: 14, marginBottom: 28, paddingBottom: 28, borderBottomWidth: 1 },
+  quoteWrap: { flexDirection: 'row', gap: 14, marginBottom: 24, paddingBottom: 24, borderBottomWidth: 1 },
   quoteBorder: { width: 1 },
   quote: { flex: 1, fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 13, lineHeight: 22 },
 
-  statsRow: { flexDirection: 'row', gap: 24, marginBottom: 28 },
-  stat: {},
-  statNum: { fontFamily: 'Georgia', fontSize: 30, fontWeight: '300', lineHeight: 34, marginBottom: 2 },
-  statLabel: { fontFamily: 'System', fontSize: 8, fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase' },
+  streakWrap: { marginBottom: 8 },
+  streakHeader: { flexDirection: 'row', alignItems: 'baseline', marginBottom: 12 },
+  streakCount: { fontFamily: 'Georgia', fontSize: 30, fontWeight: '300', lineHeight: 34 },
+  streakLabel: { fontFamily: 'System', fontSize: 8, fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase', marginLeft: 6 },
+  streakCycle: { fontFamily: 'System', fontSize: 8, fontWeight: '400', letterSpacing: 0.6 },
+  streakSegments: { flexDirection: 'row', gap: 6, marginBottom: 8 },
+  streakSegment: { flex: 1, height: 4, borderRadius: 2 },
+  streakDayHint: { fontFamily: 'System', fontSize: 8, fontWeight: '400', letterSpacing: 0.8, textTransform: 'uppercase' },
 
-  divider: { height: 1, marginBottom: 24 },
+  divider: { height: 1, marginVertical: 24 },
 
-  tagScroll: { marginBottom: 16 },
-  tagContainer: { gap: 18, paddingRight: 4 },
-  tagPill: { paddingVertical: 7, paddingHorizontal: 7, borderWidth: 1 },
-  tagText: { fontFamily: 'System', fontSize: 9, fontWeight: '600', letterSpacing: 0.9, textTransform: 'uppercase' },
+  composeTrigger: { borderWidth: 1, borderStyle: 'dashed', paddingVertical: 16, paddingHorizontal: 14, marginBottom: 0 },
+  composeTriggerText: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 15, lineHeight: 24 },
+  editorModal: { flex: 1 },
+  editorHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 14, borderBottomWidth: 1 },
+  editorTitle: { fontFamily: 'System', fontSize: 9, fontWeight: '600', letterSpacing: 1.2, textTransform: 'uppercase' },
+  editorCancel: { fontFamily: 'System', fontSize: 10, fontWeight: '500' },
+  editorSave: { fontFamily: 'System', fontSize: 10, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase' },
 
-  textarea: { backgroundColor: 'transparent', padding: 0, fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 16, lineHeight: 28, minHeight: 140, marginBottom: 12 },
-  textareaBorder: { height: 1, marginBottom: 16 },
-
-  composeFooter: { flexDirection: 'row', alignItems: 'center', marginBottom: 28 },
-  saveBtn: { paddingHorizontal: 22, paddingVertical: 12 },
-  saveBtnText: { fontFamily: 'System', fontSize: 10, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' },
-  charCount: { marginLeft: 'auto', fontSize: 11, fontFamily: 'System' },
-
-  section: { marginBottom: 8 },
+  section: { marginBottom: 0 },
   sectionTitle: { fontFamily: 'Georgia', fontSize: 20, fontWeight: '300', letterSpacing: -0.3, marginBottom: 18 },
   sectionTitleEm: { fontStyle: 'italic' },
 
   // Emotion 2-column grid
-  emotionGrid: { flexDirection: 'column', gap: 8, marginBottom: 20 },
+  emotionGrid: { flexDirection: 'column', gap: 8, marginBottom: 0 },
   emotionRow: { flexDirection: 'row', gap: 8 },
   emotionCell: {
     flex: 1,
@@ -416,7 +441,7 @@ const styles = StyleSheet.create({
   emotionLabel: { fontFamily: 'System', fontSize: 10, fontWeight: '500', flexShrink: 1 },
 
   // Habit tracker
-  habitGrid: { flexDirection: 'column', gap: 10, marginBottom: 20 },
+  habitGrid: { flexDirection: 'column', gap: 10, marginBottom: 0 },
   habitPill: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingVertical: 14, paddingHorizontal: 16, borderWidth: 1,
@@ -426,15 +451,16 @@ const styles = StyleSheet.create({
   habitCheck: { width: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   habitCheckMark: { color: '#fff', fontSize: 11, fontWeight: '700' },
 
-  trackFooter: { alignItems: 'flex-start' },
+  trackFooter: { alignItems: 'flex-start', marginTop: 16 },
   doneBtn: { borderWidth: 1, paddingHorizontal: 18, paddingVertical: 10 },
   doneBtnText: { fontFamily: 'System', fontSize: 10, fontWeight: '600', letterSpacing: 0.8, textTransform: 'uppercase' },
   savedConfirm: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 13 },
 
   voiceNoteItem: { marginBottom: 8 },
   voiceNoteSpacing: { marginTop: 8 },
-  photoHint: { fontFamily: 'System', fontSize: 9, fontStyle: 'italic', marginBottom: 24 },
-  photoPlaceholder: { width: '100%', height: 160, borderWidth: 1, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 24 },
+  photo: { width: '100%', height: 240, marginBottom: 4 },
+  photoHint: { fontFamily: 'System', fontSize: 9, fontStyle: 'italic', marginBottom: 0 },
+  photoPlaceholder: { width: '100%', height: 160, borderWidth: 1, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 0 },
   photoPlaceholderIcon: { fontSize: 28 },
   photoPlaceholderText: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 14 },
   photoPlaceholderHint: { fontFamily: 'System', fontSize: 9, letterSpacing: 0.8, textTransform: 'uppercase' },

@@ -1,14 +1,14 @@
-import React from "react";
-import { themes } from "../constants/theme";
+import React from 'react';
+import { ColorPalette, ThemeKey, themes } from '../constants/theme';
 
 export interface ThemeContextValue {
-  themeKey: "linen" | "dusk" | "sage" | "slate";
-  colors: typeof themes.linen.colors;
-  setTheme: (key: "linen" | "dusk" | "sage" | "slate") => void;
+  themeKey: ThemeKey;
+  colors: ColorPalette;
+  setTheme: (key: ThemeKey) => void;
 }
 
 export const ThemeContext = React.createContext<ThemeContextValue>({
-  themeKey: "linen",
+  themeKey: 'linen',
   colors: themes.linen.colors,
   setTheme: () => {},
 });

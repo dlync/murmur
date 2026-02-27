@@ -5,8 +5,7 @@ import {
 } from 'react-native';
 import { ThemeContext } from '../context/ThemeContext';
 import { themes, ThemeKey } from '../constants/theme';
-import { UserStats } from '../hooks/useThoughts';
-import { TAGS } from '../constants/data';
+import { Thought, UserStats } from '../hooks/useThoughts';
 import { useNotifications } from '../hooks/useNotifications';
 
 interface Props {
@@ -75,11 +74,6 @@ export default function ProfileScreen({ user, thoughts, onUpdateUsername }: Prop
     await updateTime(pendingHour, pendingMinute);
     setEditingTime(false);
   }
-
-  const tagCounts = TAGS.map((tag) => ({
-    tag,
-    count: thoughts.filter((t) => t.tag === tag).length,
-  })).sort((a, b) => b.count - a.count);
 
   const now = Date.now();
   const days = Array.from({ length: 30 }, (_, i) => {
@@ -152,9 +146,9 @@ export default function ProfileScreen({ user, thoughts, onUpdateUsername }: Prop
           </View>
           <View style={[styles.statCell, { borderTopWidth: 1, borderTopColor: colors.bright, borderLeftWidth: 1, borderLeftColor: colors.bright }]}>
             <Text style={[styles.statNum, { color: colors.bright }]}>
-              {new Set(thoughts.map((t) => t.tag).filter(Boolean)).size}
+              {thoughts.reduce((max, t) => Math.max(max, (t as any).body?.split(/\s+/).filter(Boolean).length || 0), 0)}
             </Text>
-            <Text style={[styles.statLabel, { color: colors.bright }]}>Tags used</Text>
+            <Text style={[styles.statLabel, { color: colors.bright }]}>longest entry</Text>
           </View>
           <View style={[styles.statCell, { borderTopWidth: 1, borderTopColor: colors.bright, borderLeftWidth: 1, borderLeftColor: colors.bright }]}>
             <Text style={[styles.statNum, { color: colors.bright }]}>
@@ -195,28 +189,6 @@ export default function ProfileScreen({ user, thoughts, onUpdateUsername }: Prop
           Each cell = one day · shade = entries written
         </Text>
 
-        {/* Tag distribution */}
-        <View style={[styles.sectionHeader, { borderBottomColor: colors.bright }]}>
-          <Text style={[styles.sectionTitle, { color: colors.accent }]}>By tag</Text>
-        </View>
-        <View style={[styles.tagList, { borderBottomColor: colors.bright }]}>
-          {tagCounts.map(({ tag, count }) => (
-            <View key={tag} style={styles.tagRow}>
-              <Text style={[styles.tagLabel, { color: colors.bright }]}>{tag}</Text>
-              <View style={[styles.tagBarBg, { backgroundColor: colors.surface2, borderColor: 'transparent' }]}>
-                <View style={[styles.tagBar, { backgroundColor: colors.accent, width: `${Math.max(4, (count / Math.max(1, user.thoughtsTotal)) * 100)}%` }]} />
-              </View>
-              <Text style={[styles.tagCount, { color: colors.bright }]}>{count}</Text>
-            </View>
-          ))}
-          <View style={styles.tagRow}>
-            <Text style={[styles.tagLabel, { color: colors.bright }]}>untagged</Text>
-            <View style={[styles.tagBarBg, { backgroundColor: colors.surface2, borderColor: 'transparent' }]}>
-              <View style={[styles.tagBar, { backgroundColor: colors.bright, width: `${Math.max(4, (thoughts.filter((t) => !t.tag).length / Math.max(1, user.thoughtsTotal)) * 100)}%` }]} />
-            </View>
-            <Text style={[styles.tagCount, { color: colors.bright }]}>{thoughts.filter((t) => !t.tag).length}</Text>
-          </View>
-        </View>
 
         {/* Reminders */}
         <View style={[styles.sectionHeader, { borderBottomColor: colors.bright }]}>

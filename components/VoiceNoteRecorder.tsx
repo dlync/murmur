@@ -3,6 +3,7 @@ import {
   View, Text, TouchableOpacity, StyleSheet, Alert, Platform,
 } from 'react-native';
 import { Audio } from 'expo-av';
+import { copyAsync, documentDirectory } from 'expo-file-system/legacy';
 import { ThemeContext } from '../context/ThemeContext';
 import { VoiceNote } from '../hooks/useVoiceNotes';
 
@@ -31,10 +32,11 @@ export function VoiceNotePlayback({ note, onDelete }: PlaybackProps) {
       setPlaying(false);
     } else {
       if (sound) {
-        await sound.playAsync();
+        await sound.replayAsync();
         setPlaying(true);
       } else {
-        const { sound: s } = await Audio.Sound.createAsync(
+        await Audio.setAudioModeAsync({ allowsRecordingIOS: false, playsInSilentModeIOS: true });
+      const { sound: s } = await Audio.Sound.createAsync(
           { uri: note.uri },
           { shouldPlay: true },
           (status) => {
@@ -132,12 +134,17 @@ export function VoiceNoteRecorder({ onSave }: RecorderProps) {
     setPhase('saving');
     if (intervalRef.current) clearInterval(intervalRef.current);
     await recording.stopAndUnloadAsync();
-    const uri = recording.getURI();
+    await Audio.setAudioModeAsync({ allowsRecordingIOS: false, playsInSilentModeIOS: true });
+    const tempUri = recording.getURI();
     const status = await recording.getStatusAsync();
     const durationMs = status.isRecorded ? (status.durationMillis ?? recordingMs) : recordingMs;
     setRecording(null);
     setRecordingMs(0);
-    if (uri) await onSave(uri, durationMs);
+    if (tempUri && documentDirectory) {
+      const dest = `${documentDirectory}voice_${Date.now()}.m4a`;
+      await copyAsync({ from: tempUri, to: dest });
+      await onSave(dest, durationMs);
+    }
     setPhase('idle');
   }
 

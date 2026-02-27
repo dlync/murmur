@@ -15,7 +15,7 @@ export interface ColorPalette {
   white: string;
 }
 
-export type ThemeKey = 'linen' | 'sage' | 'slate' | 'parchment' | 'rose' | 'chalk' | 'ember' | 'pine' | 'noir';
+export type ThemeKey = 'linen' | 'sage' | 'slate' | 'parchment' | 'rose' | 'chalk' | 'ember' | 'pine' | 'noir' | 'carbon';
 
 export const themes: Record<ThemeKey, { label: string; colors: ColorPalette }> = {
 
@@ -84,6 +84,18 @@ export const themes: Record<ThemeKey, { label: string; colors: ColorPalette }> =
       dim: '#555555', text: '#222222', bright: '#111111',
       accent: '#111111', accentL: '#E8E8E8', accentD: '#000000',
       error: '#CC3333', white: '#FFFFFF',
+    },
+  },
+
+  carbon: {
+    // Dark monochrome — the inverse of Chalk
+    label: 'Carbon',
+    colors: {
+      bg: '#0F0F0F', surface: '#171717', surface2: '#1F1F1F',
+      border: '#2A2A2A', border2: '#383838', muted: '#767676',
+      dim: '#AAAAAA', text: '#D8D8D8', bright: '#EEEEEE',
+      accent: '#EEEEEE', accentL: '#1F1F1F', accentD: '#FFFFFF',
+      error: '#CC4444', white: '#0F0F0F',
     },
   },
 

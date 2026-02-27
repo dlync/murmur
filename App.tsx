@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, StatusBar, TouchableOpacity } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { themes } from './constants/theme';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { themes, ThemeKey } from './constants/theme';
 import { ThemeContext } from './context/ThemeContext';
 import { useThoughts } from './hooks/useThoughts';
 import { useEmotions } from './hooks/useEmotions';
@@ -12,13 +13,15 @@ import { useVoiceNotes } from './hooks/useVoiceNotes';
 import DashboardScreen from './components/DashboardScreen';
 import ArchiveScreen from './components/ArchiveScreen';
 import ProfileScreen from './components/ProfileScreen';
+import OnboardingScreen from './components/OnboardingScreen';
 
 type Tab = 'today' | 'archive' | 'profile';
-type ThemeKey = 'linen' | 'sage' | 'slate' | 'parchment' | 'rose' | 'chalk' | 'ember' | 'pine' | 'noir';
+const ONBOARDED_KEY = '@murmur_onboarded';
 
 function Inner() {
   const [activeTab, setActiveTab] = React.useState<Tab>('today');
   const [themeKey, setThemeKey] = React.useState<ThemeKey>('linen');
+  const [onboarded, setOnboarded] = React.useState<boolean | null>(null);
   const colors = themes[themeKey]?.colors ?? themes.linen.colors;
   const setTheme = (key: ThemeKey) => setThemeKey(key);
 
@@ -29,7 +32,21 @@ function Inner() {
   const { events, addEvent, deleteEvent, updateEvent, getEventsForDate } = useEvents();
   const { notes: voiceNotes, addNote, deleteNote, getNotesForDate } = useVoiceNotes();
 
-  if (loading) {
+  React.useEffect(() => {
+    AsyncStorage.getItem(ONBOARDED_KEY)
+      .then((val) => setOnboarded(val === '1'))
+      .catch(() => setOnboarded(false));
+  }, []);
+
+  async function completeOnboarding(name: string) {
+    await updateUsername(name);
+    await AsyncStorage.setItem(ONBOARDED_KEY, '1');
+    setOnboarded(true);
+  }
+
+  const isDark = themeKey === 'ember' || themeKey === 'pine' || themeKey === 'noir' || themeKey === 'carbon';
+
+  if (loading || onboarded === null) {
     return (
       <View style={[styles.loading, { backgroundColor: colors.bg }]}>
         <Text style={[styles.loadingText, { color: colors.muted }]}>m.</Text>
@@ -37,11 +54,20 @@ function Inner() {
     );
   }
 
+  if (!onboarded) {
+    return (
+      <ThemeContext.Provider value={{ themeKey, colors, setTheme }}>
+        <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.bg} />
+        <OnboardingScreen onComplete={completeOnboarding} />
+      </ThemeContext.Provider>
+    );
+  }
+
   return (
     <ThemeContext.Provider value={{ themeKey, colors, setTheme }}>
       <SafeAreaView style={[styles.root, { backgroundColor: colors.bg }]} edges={['top', 'left', 'right']}>
         <StatusBar
-          barStyle={themeKey === 'ember' || themeKey === 'pine' || themeKey === 'noir' ? 'light-content' : 'dark-content'}
+          barStyle={isDark ? 'light-content' : 'dark-content'}
           backgroundColor={colors.bg}
         />
         <View style={[styles.header, { backgroundColor: colors.bg, borderBottomColor: colors.border }]}>
@@ -107,7 +133,7 @@ function Inner() {
                   { color: colors.bright },
                   activeTab === tab && { color: colors.accent },
                 ]}>
-                  {tab}
+                  {tab === 'archive' ? 'logs' : tab}
                 </Text>
                 {activeTab === tab && <View style={[styles.tabDot, { backgroundColor: colors.accent }]} />}
               </TouchableOpacity>

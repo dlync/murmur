@@ -1,4 +1,4 @@
-# murmur.
+npm # murmur.
 
 A quiet journaling app for daily reflection. Built with React Native + Expo.
 

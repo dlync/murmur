@@ -4,7 +4,7 @@ import { themes, ThemeKey, ColorPalette } from '../constants/theme';
 
 const THEME_KEY = '@murmur_theme';
 
-const VALID_KEYS = Object.keys(themes) as ThemeKey[];
+const VALID_KEYS: ThemeKey[] = ['linen', 'sage', 'slate', 'parchment', 'rose', 'chalk', 'ember', 'pine', 'noir'];
 
 export function useTheme() {
   const [themeKey, setThemeKey] = useState<ThemeKey>('linen');

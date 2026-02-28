@@ -88,227 +88,228 @@ export default function ProfileScreen({ user, thoughts, onUpdateUsername }: Prop
   }, 0);
 
   return (
-    <ScrollView
-      style={[styles.root, { backgroundColor: colors.bg }]}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
-      <Animated.View style={{ opacity: fadeAnim }}>
+    <View style={[styles.root, { backgroundColor: colors.bg }]}>
 
-        {/* Header */}
-        <View style={[styles.header, { borderBottomColor: colors.bright }]}>
-          <View style={styles.ruleRow}>
-            <View style={[styles.rule, { backgroundColor: colors.accent }]} />
-            <Text style={[styles.eyebrow, { color: colors.bright }]}>Your profile</Text>
-          </View>
+      {/* Header banner */}
+      <View style={[styles.headerBanner, { backgroundColor: colors.accent }]}>
+        <Text style={[styles.headerEyebrow, { color: colors.white }]}>Your profile</Text>
+        <View style={styles.headerRow}>
           {editingName ? (
             <View style={styles.nameEdit}>
               <TextInput
-                style={[styles.nameInput, { backgroundColor: colors.bg, borderColor: colors.accent, color: colors.text }]}
+                style={[styles.nameInput, { borderColor: colors.white, color: colors.white }]}
                 value={nameInput}
                 onChangeText={setNameInput}
                 autoFocus
                 returnKeyType="done"
                 onSubmitEditing={saveName}
+                placeholderTextColor={colors.white}
               />
-              <TouchableOpacity style={[styles.saveBtn, { backgroundColor: colors.accent }]} onPress={saveName}>
+              <TouchableOpacity
+                style={[styles.saveBtn, { backgroundColor: 'rgba(255,255,255,0.2)' }]}
+                onPress={saveName}
+              >
                 <Text style={[styles.saveBtnText, { color: colors.white }]}>Save</Text>
               </TouchableOpacity>
             </View>
           ) : (
-            <TouchableOpacity onPress={() => setEditingName(true)} activeOpacity={0.7}>
-              <Text style={[styles.username, { color: colors.bright }]}>{user.username}</Text>
-              <Text style={[styles.editHint, { color: colors.bright }]}>Tap to edit name</Text>
+            <TouchableOpacity onPress={() => setEditingName(true)} activeOpacity={0.7} style={{ flex: 1 }}>
+              <Text style={[styles.headerTitle, { color: colors.white }]}>{user.username}</Text>
+              <Text style={[styles.editHint, { color: colors.white }]}>Tap to edit name</Text>
             </TouchableOpacity>
           )}
         </View>
+      </View>
 
-        {/* Stats grid */}
-        <View style={[styles.sectionHeader, { borderBottomColor: colors.bright }]}>
-          <Text style={[styles.sectionTitle, { color: colors.accent }]}>Overview</Text>
-        </View>
-        <View style={[styles.statsGrid, { borderBottomColor: colors.bright }]}>
-          <View style={styles.statCell}>
-            <Text style={[styles.statNum, { color: colors.accent }]}>{user.streak}</Text>
-            <Text style={[styles.statLabel, { color: colors.bright }]}>Day streak</Text>
-          </View>
-          <View style={[styles.statCell, { borderLeftWidth: 1, borderLeftColor: colors.bright }]}>
-            <Text style={[styles.statNum, { color: colors.bright }]}>{user.thoughtsToday}</Text>
-            <Text style={[styles.statLabel, { color: colors.bright }]}>Today</Text>
-          </View>
-          <View style={[styles.statCell, { borderLeftWidth: 1, borderLeftColor: colors.bright }]}>
-            <Text style={[styles.statNum, { color: colors.bright }]}>{user.thoughtsTotal}</Text>
-            <Text style={[styles.statLabel, { color: colors.bright }]}>Total entries</Text>
-          </View>
-          <View style={[styles.statCell, { borderTopWidth: 1, borderTopColor: colors.bright }]}>
-            <Text style={[styles.statNum, { color: colors.bright }]}>{totalWords}</Text>
-            <Text style={[styles.statLabel, { color: colors.bright }]}>Words written</Text>
-          </View>
-          <View style={[styles.statCell, { borderTopWidth: 1, borderTopColor: colors.bright, borderLeftWidth: 1, borderLeftColor: colors.bright }]}>
-            <Text style={[styles.statNum, { color: colors.bright }]}>
-              {thoughts.reduce((max, t) => Math.max(max, (t as any).body?.split(/\s+/).filter(Boolean).length || 0), 0)}
-            </Text>
-            <Text style={[styles.statLabel, { color: colors.bright }]}>longest entry</Text>
-          </View>
-          <View style={[styles.statCell, { borderTopWidth: 1, borderTopColor: colors.bright, borderLeftWidth: 1, borderLeftColor: colors.bright }]}>
-            <Text style={[styles.statNum, { color: colors.bright }]}>
-              {thoughts.length > 0 ? Math.round(totalWords / thoughts.length) : 0}
-            </Text>
-            <Text style={[styles.statLabel, { color: colors.bright }]}>Avg. words</Text>
-          </View>
-        </View>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        <Animated.View style={{ opacity: fadeAnim }}>
 
-        {/* Activity grid */}
-        <View style={[styles.sectionHeader, { borderBottomColor: colors.bright }]}>
-          <Text style={[styles.sectionTitle, { color: colors.accent }]}>Last 30 days</Text>
-        </View>
-        <View style={[styles.activityGrid, { borderBottomColor: colors.bright }]}>
-          {Array.from({ length: 3 }).map((_, rowIdx) => (
-            <View key={rowIdx} style={styles.activityRow}>
-              {days.slice(rowIdx * 10, rowIdx * 10 + 10).map((d, colIdx) => {
-                const isToday = d.date.toDateString() === new Date().toDateString();
-                let cellColor = colors.surface2;
-                if (d.count >= 4) cellColor = colors.accent;
-                else if (d.count >= 2) cellColor = colors.accentL;
-                else if (d.count >= 1) cellColor = colors.border2;
-                return (
-                  <View
-                    key={colIdx}
-                    style={[
-                      styles.activityCell,
-                      { backgroundColor: cellColor, borderColor: isToday ? colors.accent : colors.bright },
-                      isToday && { borderWidth: 2 },
-                    ]}
-                  />
-                );
-              })}
+          {/* Stats grid */}
+          <View style={[styles.statsGrid, { borderColor: colors.border }]}>
+            <View style={[styles.statCell, { borderRightWidth: 2, borderRightColor: colors.border }]}>
+              <Text style={[styles.statNum, { color: colors.accent }]}>{user.streak}</Text>
+              <Text style={[styles.statLabel, { color: colors.muted }]}>Streak</Text>
             </View>
-          ))}
-        </View>
-        <Text style={[styles.activityHint, { color: colors.bright, borderBottomColor: colors.bright }]}>
-          Each cell = one day · shade = entries written
-        </Text>
-
-
-        {/* Reminders */}
-        <View style={[styles.sectionHeader, { borderBottomColor: colors.bright }]}>
-          <Text style={[styles.sectionTitle, { color: colors.accent }]}>Reminders</Text>
-        </View>
-        <View style={[styles.reminderSection, { borderBottomColor: colors.bright }]}>
-          <View style={styles.reminderRow}>
-            <View style={styles.reminderLeft}>
-              <Text style={[styles.reminderLabel, { color: colors.bright }]}>Daily reminder</Text>
-              <Text style={[styles.reminderSub, { color: colors.bright }]}>
-                {notifSettings.enabled
-                  ? `Repeats at ${formatTime(notifSettings.hour, notifSettings.minute)}`
-                  : 'Off'}
+            <View style={[styles.statCell, { borderRightWidth: 2, borderRightColor: colors.border }]}>
+              <Text style={[styles.statNum, { color: colors.bright }]}>{user.thoughtsToday}</Text>
+              <Text style={[styles.statLabel, { color: colors.muted }]}>Today</Text>
+            </View>
+            <View style={styles.statCell}>
+              <Text style={[styles.statNum, { color: colors.bright }]}>{user.thoughtsTotal}</Text>
+              <Text style={[styles.statLabel, { color: colors.muted }]}>Total</Text>
+            </View>
+            <View style={[styles.statCell, { borderTopWidth: 2, borderTopColor: colors.border, borderRightWidth: 2, borderRightColor: colors.border }]}>
+              <Text style={[styles.statNum, { color: colors.bright }]}>{totalWords}</Text>
+              <Text style={[styles.statLabel, { color: colors.muted }]}>Words</Text>
+            </View>
+            <View style={[styles.statCell, { borderTopWidth: 2, borderTopColor: colors.border, borderRightWidth: 2, borderRightColor: colors.border }]}>
+              <Text style={[styles.statNum, { color: colors.bright }]}>
+                {thoughts.reduce((max, t) => Math.max(max, (t as any).body?.split(/\s+/).filter(Boolean).length || 0), 0)}
               </Text>
+              <Text style={[styles.statLabel, { color: colors.muted }]}>Longest</Text>
             </View>
-            <Switch
-              value={notifSettings.enabled}
-              onValueChange={handleToggleNotifications}
-              trackColor={{ false: colors.bright, true: colors.accent }}
-              thumbColor={colors.white}
-              disabled={notifLoading}
-            />
+            <View style={[styles.statCell, { borderTopWidth: 2, borderTopColor: colors.border }]}>
+              <Text style={[styles.statNum, { color: colors.bright }]}>
+                {thoughts.length > 0 ? Math.round(totalWords / thoughts.length) : 0}
+              </Text>
+              <Text style={[styles.statLabel, { color: colors.muted }]}>Avg.</Text>
+            </View>
           </View>
 
-          {notifSettings.enabled && (
-            <>
-              <View style={[styles.reminderDivider, { backgroundColor: colors.bright }]} />
-              {editingTime ? (
-                <View style={styles.timePicker}>
-                  <Text style={[styles.timePickerLabel, { color: colors.bright }]}>Hour</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.timeScroll}>
-                    {HOURS.map((h) => (
-                      <TouchableOpacity
-                        key={h}
-                        style={[
-                          styles.timeChip,
-                          { borderColor: 'transparent' },
-                          pendingHour === h && { borderColor: colors.accent },
-                        ]}
-                        onPress={() => setPendingHour(h)}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={[styles.timeChipText, { color: pendingHour === h ? colors.accent : colors.bright }]}>
-                          {pad(h)}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                  <Text style={[styles.timePickerLabel, { color: colors.bright }]}>Minute</Text>
-                  <View style={styles.minuteRow}>
-                    {MINUTES.map((m) => (
-                      <TouchableOpacity
-                        key={m}
-                        style={[
-                          styles.timeChip,
-                          { borderColor: 'transparent' },
-                          pendingMinute === m && { borderColor: colors.accent },
-                        ]}
-                        onPress={() => setPendingMinute(m)}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={[styles.timeChipText, { color: pendingMinute === m ? colors.accent : colors.bright }]}>
-                          :{pad(m)}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                  <View style={styles.timeActions}>
-                    <TouchableOpacity onPress={() => setEditingTime(false)} activeOpacity={0.7}>
-                      <Text style={[styles.timeCancelText, { color: colors.bright }]}>Cancel</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.timeSaveBtn, { backgroundColor: colors.accent }]}
-                      onPress={handleSaveTime}
-                      activeOpacity={0.8}
-                    >
-                      <Text style={[styles.timeSaveBtnText, { color: colors.white }]}>
-                        Set {formatTime(pendingHour, pendingMinute)}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ) : (
-                <TouchableOpacity style={styles.timeDisplay} onPress={() => setEditingTime(true)} activeOpacity={0.7}>
-                  <Text style={[styles.timeDisplayValue, { color: colors.bright }]}>
-                    {formatTime(notifSettings.hour, notifSettings.minute)}
-                  </Text>
-                  <Text style={[styles.timeDisplayHint, { color: colors.bright }]}>Tap to change time</Text>
-                </TouchableOpacity>
-              )}
-            </>
-          )}
-        </View>
-
-        {/* Appearance */}
-        <View style={[styles.sectionHeader, { borderBottomColor: colors.bright }]}>
-          <Text style={[styles.sectionTitle, { color: colors.accent }]}>Appearance</Text>
-        </View>
-        <View style={[styles.appearanceRow, { borderBottomColor: colors.bright }]}>
-          <View style={styles.appearanceLeft}>
-            <Text style={[styles.appearanceLabel, { color: colors.bright }]}>Theme</Text>
-            <Text style={[styles.appearanceSub, { color: colors.bright }]}>{themes[themeKey].label}</Text>
+          {/* Activity grid */}
+          <Text style={[styles.sectionLabel, { color: colors.bright }]}>
+            Last 30 <Text style={[styles.sectionLabelEm, { color: colors.accent }]}>days</Text>
+          </Text>
+          <View style={styles.activityGrid}>
+            {Array.from({ length: 3 }).map((_, rowIdx) => (
+              <View key={rowIdx} style={styles.activityRow}>
+                {days.slice(rowIdx * 10, rowIdx * 10 + 10).map((d, colIdx) => {
+                  const isToday = d.date.toDateString() === new Date().toDateString();
+                  let cellColor = colors.surface2;
+                  if (d.count >= 4) cellColor = colors.accent;
+                  else if (d.count >= 2) cellColor = colors.accentL;
+                  else if (d.count >= 1) cellColor = colors.border2;
+                  return (
+                    <View
+                      key={colIdx}
+                      style={[
+                        styles.activityCell,
+                        { backgroundColor: cellColor },
+                        isToday && { borderWidth: 2, borderColor: colors.accent },
+                      ]}
+                    />
+                  );
+                })}
+              </View>
+            ))}
           </View>
-          <TouchableOpacity
-            style={[styles.changeThemeBtn, { borderColor: colors.accent }]}
-            onPress={() => setThemeModalVisible(true)}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.changeThemeBtnText, { color: colors.accent }]}>Change theme</Text>
-          </TouchableOpacity>
-        </View>
+          <Text style={[styles.activityHint, { color: colors.muted }]}>
+            Each cell = one day · shade = entries written
+          </Text>
 
-        {/* About */}
-        <View style={styles.about}>
-          <Text style={[styles.aboutLogo, { color: colors.bright }]}>murmur.</Text>
-          <Text style={[styles.aboutTagline, { color: colors.bright }]}>be still. be honest.</Text>
-          <Text style={[styles.aboutCopy, { color: colors.bright }]}>© 2026 · A quiet space for daily reflection.</Text>
-        </View>
+          {/* Reminders */}
+          <View style={[styles.settingCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={styles.reminderRow}>
+              <View style={styles.reminderLeft}>
+                <Text style={[styles.reminderTime, { color: colors.accent }]}>
+                  {formatTime(notifSettings.hour, notifSettings.minute)}
+                </Text>
+                <Text style={[styles.reminderLabel, { color: colors.muted }]}>
+                  Daily reminder · {notifSettings.enabled ? 'on' : 'off'}
+                </Text>
+              </View>
+              <Switch
+                value={notifSettings.enabled}
+                onValueChange={handleToggleNotifications}
+                trackColor={{ false: colors.surface2, true: colors.accent }}
+                thumbColor={colors.white}
+                disabled={notifLoading}
+              />
+            </View>
 
-      </Animated.View>
+            {notifSettings.enabled && (
+              <>
+                <View style={[styles.cardDivider, { backgroundColor: colors.border }]} />
+                {editingTime ? (
+                  <View style={styles.timePicker}>
+                    <Text style={[styles.timePickerLabel, { color: colors.muted }]}>Hour</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.timeScroll}>
+                      {HOURS.map((h) => (
+                        <TouchableOpacity
+                          key={h}
+                          style={[
+                            styles.timeChip,
+                            { borderColor: 'transparent' },
+                            pendingHour === h && { borderColor: colors.accent },
+                          ]}
+                          onPress={() => setPendingHour(h)}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={[styles.timeChipText, { color: pendingHour === h ? colors.accent : colors.bright }]}>
+                            {pad(h)}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                    <Text style={[styles.timePickerLabel, { color: colors.muted }]}>Minute</Text>
+                    <View style={styles.minuteRow}>
+                      {MINUTES.map((m) => (
+                        <TouchableOpacity
+                          key={m}
+                          style={[
+                            styles.timeChip,
+                            { borderColor: 'transparent' },
+                            pendingMinute === m && { borderColor: colors.accent },
+                          ]}
+                          onPress={() => setPendingMinute(m)}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={[styles.timeChipText, { color: pendingMinute === m ? colors.accent : colors.bright }]}>
+                            :{pad(m)}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={styles.timeActions}>
+                      <TouchableOpacity onPress={() => setEditingTime(false)} activeOpacity={0.7}>
+                        <Text style={[styles.timeCancelText, { color: colors.bright }]}>Cancel</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.timeSaveBtn, { backgroundColor: colors.accent }]}
+                        onPress={handleSaveTime}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={[styles.timeSaveBtnText, { color: colors.white }]}>
+                          Set {formatTime(pendingHour, pendingMinute)}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ) : (
+                  <TouchableOpacity style={styles.timeDisplay} onPress={() => setEditingTime(true)} activeOpacity={0.7}>
+                    <Text style={[styles.timeDisplayHint, { color: colors.muted }]}>Tap to change time</Text>
+                  </TouchableOpacity>
+                )}
+              </>
+            )}
+          </View>
+
+          {/* Theme */}
+          <View style={[styles.settingCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={styles.themeCardRow}>
+              <View style={styles.themeCardLeft}>
+                <Text style={[styles.themeCardLbl, { color: colors.muted }]}>Theme</Text>
+                <Text style={[styles.themeCardName, { color: colors.bright, fontSize: 18 }]}>{themes[themeKey].label}</Text>
+              </View>
+              <View style={styles.themeSwatches}>
+                {[colors.bg, colors.surface2, colors.accent, colors.bright].map((c, i) => (
+                  <View key={i} style={[styles.themeSwatch, { backgroundColor: c, borderColor: colors.border }]} />
+                ))}
+              </View>
+            </View>
+            <View style={[styles.cardDivider, { backgroundColor: colors.border }]} />
+            <TouchableOpacity
+              style={styles.changeThemeBtn}
+              onPress={() => setThemeModalVisible(true)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.changeThemeBtnText, { color: colors.accent }]}>Change theme →</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* About */}
+          <View style={styles.about}>
+            <Text style={[styles.aboutLogo, { color: colors.bright }]}>murmur.</Text>
+            <Text style={[styles.aboutTagline, { color: colors.muted }]}>be still. be honest.</Text>
+            <Text style={[styles.aboutCopy, { color: colors.muted }]}>© 2026 · A quiet space for daily reflection.</Text>
+          </View>
+
+        </Animated.View>
+      </ScrollView>
 
       {/* Theme picker modal */}
       <Modal
@@ -317,139 +318,194 @@ export default function ProfileScreen({ user, thoughts, onUpdateUsername }: Prop
         presentationStyle="pageSheet"
         onRequestClose={() => setThemeModalVisible(false)}
       >
-        <ScrollView
-          style={[styles.themeModal, { backgroundColor: colors.bg }]}
-          contentContainerStyle={styles.themeModalContent}
-        >
-          <View style={[styles.themeModalHeader, { borderBottomColor: colors.bright }]}>
-            <Text style={[styles.themeModalTitle, { color: colors.bright }]}>
-              Choose a <Text style={[styles.themeModalTitleEm, { color: colors.accent }]}>theme</Text>
-            </Text>
-            <TouchableOpacity onPress={() => setThemeModalVisible(false)} activeOpacity={0.7}>
-              <Text style={[styles.themeModalClose, { color: colors.bright }]}>Close</Text>
-            </TouchableOpacity>
+        <View style={[styles.themeModal, { backgroundColor: colors.bg }]}>
+          {/* Banner header */}
+          <View style={[styles.themeModalBanner, { backgroundColor: colors.accent }]}>
+            <Text style={[styles.themeModalEyebrow, { color: colors.white }]}>Appearance</Text>
+            <View style={styles.themeModalBannerRow}>
+              <Text style={[styles.themeModalTitle, { color: colors.white }]}>
+                Choose a <Text style={styles.themeModalTitleEm}>theme</Text>
+              </Text>
+              <TouchableOpacity
+                onPress={() => setThemeModalVisible(false)}
+                activeOpacity={0.7}
+                style={[styles.themeModalCloseBtn, { backgroundColor: 'rgba(255,255,255,0.2)' }]}
+              >
+                <Text style={[styles.themeModalClose, { color: colors.white }]}>✕</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
-          {(Object.keys(themes) as ThemeKey[]).map((key) => {
-            const t = themes[key];
-            const isActive = key === themeKey;
-            return (
-              <TouchableOpacity
-                key={key}
-                style={[
-                  styles.themeRow,
-                  { backgroundColor: t.colors.bg, borderBottomColor: t.colors.bright },
-                  isActive && { borderLeftWidth: 3, borderLeftColor: t.colors.accent },
-                ]}
-                onPress={() => { setTheme(key); setThemeModalVisible(false); }}
-                activeOpacity={0.85}
-              >
-                <View style={styles.themeRowSwatches}>
-                  <View style={[styles.themeRowSwatch, { backgroundColor: t.colors.bg, borderColor: t.colors.bright, borderWidth: 1 }]} />
-                  <View style={[styles.themeRowSwatch, { backgroundColor: t.colors.surface2 }]} />
-                  <View style={[styles.themeRowSwatch, { backgroundColor: t.colors.accent }]} />
-                  <View style={[styles.themeRowSwatch, { backgroundColor: t.colors.bright }]} />
-                </View>
-                <View style={styles.themeRowInfo}>
-                  <Text style={[styles.themeRowName, { color: isActive ? t.colors.accent : t.colors.bright }]}>
-                    {t.label}
-                  </Text>
-                  {isActive && (
-                    <Text style={[styles.themeRowCurrent, { color: t.colors.accent }]}>Current</Text>
-                  )}
-                </View>
-                <View style={[styles.themeRowRadio, { borderColor: isActive ? t.colors.accent : t.colors.bright }]}>
-                  {isActive && <View style={[styles.themeRowRadioInner, { backgroundColor: t.colors.accent }]} />}
-                </View>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+          {/* Theme grid */}
+          <ScrollView contentContainerStyle={styles.themeModalContent}>
+            <View style={styles.themeGrid}>
+              {(Object.keys(themes) as ThemeKey[]).map((key) => {
+                const t = themes[key];
+                const isActive = key === themeKey;
+                return (
+                  <TouchableOpacity
+                    key={key}
+                    style={[
+                      styles.themeCard,
+                      { backgroundColor: isActive ? t.colors.accent : t.colors.border },
+                    ]}
+                    onPress={() => { setTheme(key); setThemeModalVisible(false); }}
+                    activeOpacity={0.85}
+                  >
+                    <View style={[styles.themeCardInner, { backgroundColor: t.colors.bg }]}>
+                      {/* Mini header strip */}
+                      <View style={[styles.themeCardStrip, { backgroundColor: t.colors.accent }]}>
+                        {isActive && (
+                          <View style={[styles.themeActivePill, { backgroundColor: 'rgba(255,255,255,0.25)' }]}>
+                            <Text style={[styles.themeActivePillText, { color: t.colors.white }]}>✓ Active</Text>
+                          </View>
+                        )}
+                        {/* Mini mock lines */}
+                        <View style={styles.themeStripLines}>
+                          <View style={[styles.themeStripLine, { backgroundColor: 'rgba(255,255,255,0.5)', width: '55%' }]} />
+                          <View style={[styles.themeStripLine, { backgroundColor: 'rgba(255,255,255,0.3)', width: '35%' }]} />
+                        </View>
+                      </View>
+
+                      {/* Card body */}
+                      <View style={[styles.themeCardBody, { backgroundColor: t.colors.surface }]}>
+                        {/* Mock content lines */}
+                        <View style={[styles.themeBodyLine, { backgroundColor: t.colors.border2, width: '80%' }]} />
+                        <View style={[styles.themeBodyLine, { backgroundColor: t.colors.border, width: '55%', marginTop: 4 }]} />
+                      </View>
+
+                      {/* Footer: name + swatches */}
+                      <View style={[styles.themeCardFooter, { backgroundColor: t.colors.bg }]}>
+                        <Text style={[styles.themeCardName, { color: t.colors.bright }]}>{t.label}</Text>
+                        <View style={styles.themeCardSwatches}>
+                          {[t.colors.bg, t.colors.surface2, t.colors.accent, t.colors.bright].map((c, i) => (
+                            <View key={i} style={[styles.themeCardSwatch, { backgroundColor: c, borderColor: t.colors.border }]} />
+                          ))}
+                        </View>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </ScrollView>
+        </View>
       </Modal>
 
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  scroll: { flex: 1 },
   content: { paddingBottom: 60 },
 
-  header: { padding: 28, borderBottomWidth: 1 },
-  ruleRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 },
-  rule: { width: 14, height: 1 },
-  eyebrow: { fontFamily: 'System', fontSize: 9, fontWeight: '600', letterSpacing: 1.4, textTransform: 'uppercase' },
-  username: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 26, fontWeight: '300', marginBottom: 4 },
-  editHint: { fontFamily: 'System', fontSize: 10 },
-  nameEdit: { flexDirection: 'row', gap: 10, alignItems: 'center' },
-  nameInput: { flex: 1, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 10, fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 18 },
-  saveBtn: { paddingHorizontal: 16, paddingVertical: 10 },
-  saveBtnText: { fontFamily: 'System', fontSize: 9, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase' },
+  // Header banner
+  headerBanner: { paddingHorizontal: 22, paddingTop: 18, paddingBottom: 28, borderBottomLeftRadius: 30, borderBottomRightRadius: 30},
+  headerEyebrow: {
+    fontFamily: 'DMSans_700Bold', fontSize: 9,
+    letterSpacing: 2, textTransform: 'uppercase',
+    marginBottom: 18,
+  },
+  headerTitle: { fontFamily: 'Fraunces_900Black', fontSize: 32, textTransform: 'uppercase', letterSpacing: -0.5, lineHeight: 30 },
+  headerTitleEm: { fontFamily: 'Fraunces_900Black_Italic', textTransform: 'none' },
+  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  username: { fontFamily: 'Fraunces_300Light_Italic', fontSize: 30, lineHeight: 34, marginBottom: 2 },
+  editHint: { fontFamily: 'DMSans_400Regular', fontSize: 9 },
+  nameEdit: { flexDirection: 'row', gap: 10, alignItems: 'center', flex: 1 },
+  nameInput: { flex: 1, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8, fontFamily: 'Fraunces_300Light_Italic', fontSize: 18, borderRadius: 8 },
+  saveBtn: { borderRadius: 8, paddingHorizontal: 14, paddingVertical: 8 },
+  saveBtnText: { fontFamily: 'DMSans_700Bold', fontSize: 9, letterSpacing: 0.8, textTransform: 'uppercase' },
 
-  sectionHeader: { paddingHorizontal: 20, paddingTop: 22, paddingBottom: 12, borderBottomWidth: 1 },
-  sectionTitle: { fontFamily: 'System', fontSize: 9, fontWeight: '700', letterSpacing: 1.2, textTransform: 'uppercase' },
+  // Stats grid
+  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', borderWidth: 2, marginHorizontal: 18, marginTop: 16, borderRadius: 14, overflow: 'hidden' },
+  statCell: { width: '33.33%', paddingVertical: 18, paddingHorizontal: 12, alignItems: 'center' },
+  statNum: { fontFamily: 'Fraunces_900Black', fontSize: 32, lineHeight: 38, marginBottom: 4 },
+  statLabel: { fontFamily: 'DMSans_700Bold', fontSize: 7, letterSpacing: 1, textTransform: 'uppercase', textAlign: 'center' },
 
-  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', borderBottomWidth: 1 },
-  statCell: { width: '33.33%', padding: 18 },
-  statNum: { fontFamily: 'Georgia', fontSize: 24, fontWeight: '300', lineHeight: 28, marginBottom: 3 },
-  statLabel: { fontFamily: 'System', fontSize: 8, fontWeight: '600', letterSpacing: 0.8, textTransform: 'uppercase' },
+  // Section labels
+  sectionLabel: {
+    fontFamily: 'Fraunces_900Black', fontSize: 13,
+    textTransform: 'uppercase', letterSpacing: 0.3,
+    marginHorizontal: 18, marginTop: 20, marginBottom: 10,
+  },
+  sectionLabelEm: { fontFamily: 'Fraunces_300Light_Italic', textTransform: 'none' },
 
-  activityGrid: { paddingHorizontal: 20, paddingVertical: 16, gap: 4, borderBottomWidth: 1 },
+  // Activity grid
+  activityGrid: { paddingHorizontal: 18, gap: 4 },
   activityRow: { flexDirection: 'row', gap: 4 },
-  activityCell: { flex: 1, aspectRatio: 1, borderWidth: 1 },
-  activityHint: { fontFamily: 'System', fontSize: 9, paddingHorizontal: 20, paddingBottom: 4, paddingTop: 6, fontStyle: 'italic', borderBottomWidth: 1 },
+  activityCell: { flex: 1, aspectRatio: 1, borderRadius: 4 },
+  activityHint: {
+    fontFamily: 'DMSans_400Regular', fontSize: 9, paddingHorizontal: 18,
+    paddingBottom: 4, paddingTop: 6,
+  },
 
-  tagList: { padding: 20, gap: 12, borderBottomWidth: 1 },
-  tagRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  tagLabel: { width: 72, fontFamily: 'System', fontSize: 9, fontWeight: '600', letterSpacing: 0.8, textTransform: 'uppercase' },
-  tagBarBg: { flex: 1, height: 6, borderWidth: 1 },
-  tagBar: { height: '100%' },
-  tagCount: { width: 24, fontFamily: 'Georgia', fontSize: 12, textAlign: 'right' },
-
-  reminderSection: { borderBottomWidth: 1 },
-  reminderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20 },
+  // Setting cards (reminders, theme)
+  settingCard: {
+    marginHorizontal: 18, marginTop: 16,
+    borderRadius: 16, borderWidth: 1, overflow: 'hidden',
+  },
+  cardDivider: { height: 1 },
+  reminderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16 },
   reminderLeft: { flex: 1 },
-  reminderLabel: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 16, fontWeight: '300', marginBottom: 3 },
-  reminderSub: { fontFamily: 'System', fontSize: 9, letterSpacing: 0.5 },
-  reminderDivider: { height: 1, marginHorizontal: 20 },
-  timeDisplay: { padding: 20 },
-  timeDisplayValue: { fontFamily: 'Georgia', fontSize: 32, fontWeight: '300', letterSpacing: -0.5, marginBottom: 4 },
-  timeDisplayHint: { fontFamily: 'System', fontSize: 9, fontStyle: 'italic' },
-  timePicker: { padding: 20, gap: 10 },
-  timePickerLabel: { fontFamily: 'System', fontSize: 8, fontWeight: '600', letterSpacing: 1.2, textTransform: 'uppercase' },
+  reminderTime: { fontFamily: 'Fraunces_900Black', fontSize: 26, lineHeight: 30, marginBottom: 3 },
+  reminderLabel: { fontFamily: 'DMSans_700Bold', fontSize: 8, letterSpacing: 1, textTransform: 'uppercase' },
+  timeDisplay: { padding: 16 },
+  timeDisplayHint: { fontFamily: 'DMSans_400Regular', fontSize: 9 },
+  timePicker: { padding: 16, gap: 10 },
+  timePickerLabel: { fontFamily: 'DMSans_600SemiBold', fontSize: 8, letterSpacing: 1.2, textTransform: 'uppercase' },
   timeScroll: { flexGrow: 0 },
   minuteRow: { flexDirection: 'row', gap: 8 },
-  timeChip: { paddingVertical: 6, paddingHorizontal: 10, borderWidth: 1, marginRight: 6 },
-  timeChipText: { fontFamily: 'System', fontSize: 11, fontWeight: '500', letterSpacing: 0.5 },
+  timeChip: { paddingVertical: 6, paddingHorizontal: 10, borderWidth: 1, marginRight: 6, borderRadius: 6 },
+  timeChipText: { fontFamily: 'DMSans_400Regular', fontSize: 11, letterSpacing: 0.5 },
   timeActions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 },
-  timeCancelText: { fontFamily: 'System', fontSize: 10, fontWeight: '500' },
-  timeSaveBtn: { paddingHorizontal: 18, paddingVertical: 10 },
-  timeSaveBtnText: { fontFamily: 'System', fontSize: 9, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase' },
+  timeCancelText: { fontFamily: 'DMSans_400Regular', fontSize: 10 },
+  timeSaveBtn: { borderRadius: 50, paddingHorizontal: 18, paddingVertical: 10 },
+  timeSaveBtnText: { fontFamily: 'DMSans_700Bold', fontSize: 9, letterSpacing: 0.8, textTransform: 'uppercase' },
 
-  appearanceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, borderBottomWidth: 1 },
-  appearanceLeft: { flex: 1 },
-  appearanceLabel: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 16, fontWeight: '300', marginBottom: 3 },
-  appearanceSub: { fontFamily: 'System', fontSize: 9, letterSpacing: 0.5 },
-  changeThemeBtn: { borderWidth: 1, paddingHorizontal: 14, paddingVertical: 8 },
-  changeThemeBtnText: { fontFamily: 'System', fontSize: 9, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase' },
+  // Theme card
+  themeCardRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16 },
+  themeCardLeft: {},
+  themeCardLbl: { fontFamily: 'DMSans_700Bold', fontSize: 8, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 3 },
+  themeSwatches: { flexDirection: 'row', gap: 5 },
+  themeSwatch: { width: 18, height: 18, borderRadius: 9, borderWidth: 1.5 },
+  changeThemeBtn: { paddingHorizontal: 16, paddingVertical: 12 },
+  changeThemeBtnText: { fontFamily: 'DMSans_700Bold', fontSize: 9, letterSpacing: 0.8, textTransform: 'uppercase' },
 
+  about: { padding: 28, alignItems: 'center', gap: 4, marginTop: 8 },
+  aboutLogo: { fontFamily: 'Fraunces_300Light_Italic', fontSize: 18 },
+  aboutTagline: { fontFamily: 'Fraunces_300Light_Italic', fontSize: 12 },
+  aboutCopy: { fontFamily: 'DMSans_400Regular', fontSize: 9, marginTop: 4 },
+
+  // Theme picker modal
   themeModal: { flex: 1 },
-  themeModalContent: { paddingBottom: 60 },
-  themeModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', padding: 28, borderBottomWidth: 1 },
-  themeModalTitle: { fontFamily: 'Georgia', fontSize: 26, fontWeight: '300', letterSpacing: -0.3 },
-  themeModalTitleEm: { fontStyle: 'italic' },
-  themeModalClose: { fontFamily: 'System', fontSize: 10, fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase', paddingBottom: 4 },
-  themeRow: { flexDirection: 'row', alignItems: 'center', gap: 16, paddingVertical: 20, paddingHorizontal: 24, borderBottomWidth: 1, borderLeftWidth: 0 },
-  themeRowSwatches: { flexDirection: 'row', gap: 4 },
-  themeRowSwatch: { width: 20, height: 20, borderRadius: 10 },
-  themeRowInfo: { flex: 1 },
-  themeRowName: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 18, fontWeight: '300', marginBottom: 2 },
-  themeRowCurrent: { fontFamily: 'System', fontSize: 8, fontWeight: '600', letterSpacing: 1.2, textTransform: 'uppercase' },
-  themeRowRadio: { width: 18, height: 18, borderRadius: 9, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
-  themeRowRadioInner: { width: 9, height: 9, borderRadius: 4.5 },
+  themeModalBanner: { paddingHorizontal: 22, paddingTop: 18, paddingBottom: 20 },
+  themeModalEyebrow: {
+    fontFamily: 'DMSans_700Bold', fontSize: 9,
+    letterSpacing: 2, textTransform: 'uppercase',
+    marginBottom: 8,
+  },
+  themeModalBannerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  themeModalTitle: { fontFamily: 'Fraunces_900Black', fontSize: 22, textTransform: 'uppercase' },
+  themeModalTitleEm: { fontFamily: 'Fraunces_300Light_Italic', textTransform: 'none' },
+  themeModalCloseBtn: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  themeModalClose: { fontFamily: 'DMSans_700Bold', fontSize: 13 },
+  themeModalContent: { padding: 16, paddingBottom: 60 },
 
-  about: { padding: 28, alignItems: 'center', gap: 4 },
-  aboutLogo: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 18, fontWeight: '300' },
-  aboutTagline: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 12 },
-  aboutCopy: { fontFamily: 'System', fontSize: 9, marginTop: 4 },
+  // Theme card grid
+  themeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  themeCard: { width: '47%', borderRadius: 16, padding: 2 },
+  themeCardInner: { borderRadius: 14, overflow: 'hidden' },
+  themeCardStrip: { height: 52, padding: 10, justifyContent: 'space-between' },
+  themeActivePill: { borderRadius: 50, paddingVertical: 3, paddingHorizontal: 8, alignSelf: 'flex-start' },
+  themeActivePillText: { fontFamily: 'DMSans_700Bold', fontSize: 8, letterSpacing: 0.8, textTransform: 'uppercase' },
+  themeStripLines: { gap: 4 },
+  themeStripLine: { height: 3, borderRadius: 2 },
+  themeCardBody: { height: 36, paddingHorizontal: 10, paddingVertical: 8 },
+  themeBodyLine: { height: 3, borderRadius: 2 },
+  themeCardFooter: { padding: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  themeCardName: { fontFamily: 'Fraunces_300Light_Italic', fontSize: 13 },
+  themeCardSwatches: { flexDirection: 'row', gap: 3 },
+  themeCardSwatch: { width: 12, height: 12, borderRadius: 6, borderWidth: 1 },
 });

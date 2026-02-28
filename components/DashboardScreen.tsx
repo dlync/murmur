@@ -6,7 +6,6 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { ThemeContext } from '../context/ThemeContext';
-import { getDailyQuote } from '../constants/data';
 import { Thought, UserStats } from '../hooks/useThoughts';
 import { EMOTIONS } from '../hooks/useEmotions';
 import { HABITS } from '../hooks/useHabits';
@@ -47,8 +46,8 @@ export default function DashboardScreen({
   const [body, setBody] = useState('');
   const [saving, setSaving] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
+  const [voiceModalOpen, setVoiceModalOpen] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const quote = getDailyQuote();
 
   useEffect(() => {
     Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start();
@@ -63,7 +62,6 @@ export default function DashboardScreen({
     setSaving(false);
   }
 
-  // Strip HTML tags to get plain text (used for empty-check and save button state)
   function htmlToText(html: string): string {
     return html
       .replace(/<br\s*\/?>/gi, '\n')
@@ -122,10 +120,21 @@ export default function DashboardScreen({
     weekday: 'long', day: 'numeric', month: 'long',
   });
   const streakPosition = user.streak === 0 ? 0 : ((user.streak - 1) % 7) + 1;
-  const streakCycle = user.streak === 0 ? 0 : Math.ceil(user.streak / 7);
+  const streakCycle = user.streak === 0 ? 1 : Math.ceil(user.streak / 7);
 
   return (
-    <KeyboardAvoidingView style={[styles.root, { backgroundColor: colors.bg }]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    <KeyboardAvoidingView
+      style={[styles.root, { backgroundColor: colors.bg }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      {/* Header banner */}
+      <View style={[styles.headerBanner, { backgroundColor: colors.accent }]}>
+        <Text style={[styles.headerDate, { color: colors.white }]}>{today}</Text>
+        <Text style={[styles.headerTitle, { color: colors.white }]}>
+          What are{'\n'}you <Text style={styles.headerTitleEm}>thinking?</Text>
+        </Text>
+      </View>
+
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
@@ -134,224 +143,217 @@ export default function DashboardScreen({
       >
         <Animated.View style={{ opacity: fadeAnim }}>
 
-          <Text style={[styles.date, { color: colors.bright }]}>{today}</Text>
-
-          <Text style={[styles.title, { color: colors.bright }]}>
-            What are{'\n'}you <Text style={[styles.titleEm, { color: colors.accent }]}>thinking?</Text>
-          </Text>
-
-          <View style={[styles.quoteWrap, { borderBottomColor: colors.bright }]}>
-            <View style={[styles.quoteBorder, { backgroundColor: colors.accent }]} />
-            <Text style={[styles.quote, { color: colors.bright }]}>"{quote}"</Text>
-          </View>
-
-          {/* Streak bar */}
-          <View style={styles.streakWrap}>
-            <View style={styles.streakHeader}>
-              <Text style={[styles.streakCount, { color: colors.accent }]}>{user.streak}</Text>
-              <Text style={[styles.streakLabel, { color: colors.bright }]}> day streak</Text>
-              {streakCycle > 1 && (
-                <Text style={[styles.streakCycle, { color: colors.muted }]}> · cycle {streakCycle}</Text>
-              )}
-            </View>
-            <View style={styles.streakSegments}>
-              {Array.from({ length: 7 }, (_, i) => (
-                <View
-                  key={i}
-                  style={[
-                    styles.streakSegment,
-                    { backgroundColor: (i + 1) <= streakPosition ? colors.accent : colors.surface2 },
-                  ]}
-                />
-              ))}
-            </View>
-            <Text style={[styles.streakDayHint, { color: colors.muted }]}>
-              {user.streak === 0 ? 'Start your streak — write today' : `Day ${streakPosition} of 7`}
-            </Text>
-          </View>
-
-          <View style={[styles.divider, { backgroundColor: colors.bright }]} />
-
-          <TouchableOpacity
-            style={[styles.composeTrigger, { borderColor: colors.bright }]}
-            onPress={() => setEditorOpen(true)}
-            activeOpacity={0.7}
-          >
-            {htmlToText(body).trim() ? (
-              <FormattedText
-                text={body}
-                style={[styles.composeTriggerText, { color: colors.text }]}
-                numberOfLines={2}
-              />
-            ) : (
-              <Text style={[styles.composeTriggerText, { color: colors.bright }]} numberOfLines={2}>
-                {'Begin anywhere. There\'s no wrong way in…'}
+          {/* Streak pill */}
+          <View style={[styles.streakCard, { backgroundColor: colors.border }]}>
+            <Text style={[styles.streakNum, { color: colors.accent }]}>{user.streak}</Text>
+            <View style={styles.streakCardInfo}>
+              <Text style={[styles.streakCardLabel, { color: colors.muted }]}>
+                Day Streak · cycle {streakCycle}
               </Text>
-            )}
-          </TouchableOpacity>
+              <View style={styles.streakSegs}>
+                {Array.from({ length: 7 }, (_, i) => (
+                  <View
+                    key={i}
+                    style={[
+                      styles.streakSeg,
+                      { backgroundColor: (i + 1) <= streakPosition ? colors.accent : colors.surface2 },
+                    ]}
+                  />
+                ))}
+              </View>
+            </View>
+          </View>
 
-          <View style={[styles.divider, { backgroundColor: colors.bright }]} />
+          {/* Compose box */}
+          <View style={[styles.composeBox, { backgroundColor: colors.surface, borderColor: colors.border2 }]}>
+            <TouchableOpacity onPress={() => setEditorOpen(true)} activeOpacity={0.7}>
+              {htmlToText(body).trim() ? (
+                <FormattedText
+                  text={body}
+                  style={[styles.composePlaceholder, { color: colors.text }]}
+                  numberOfLines={2}
+                />
+              ) : (
+                <Text style={[styles.composePlaceholder, { color: colors.muted }]}>
+                  Begin anywhere. There's no wrong way in…
+                </Text>
+              )}
+            </TouchableOpacity>
+            <View style={styles.composeActions}>
+              <TouchableOpacity
+                style={[styles.composeBtnPrimary, { backgroundColor: colors.accent }]}
+                onPress={() => setEditorOpen(true)}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.composeBtnText, { color: colors.white }]}>Write ✦</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.composeBtnSecondary, { backgroundColor: colors.accentL }]}
+                onPress={() => setVoiceModalOpen(true)}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.composeBtnText, { color: colors.accentD }]}>🎙 Record</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
 
           {/* Emotion tracker */}
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.bright }]}>
-              How are you <Text style={[styles.sectionTitleEm, { color: colors.accent }]}>feeling?</Text>
-            </Text>
-
-            {/* 2-column grid: pair up emotions */}
-            <View style={styles.emotionGrid}>
-              {Array.from({ length: Math.ceil(EMOTIONS.length / 2) }).map((_, rowIdx) => {
-                const left = EMOTIONS[rowIdx * 2];
-                const right = EMOTIONS[rowIdx * 2 + 1];
-                return (
-                  <View key={rowIdx} style={styles.emotionRow}>
-                    {[left, right].map((e, colIdx) => {
-                      if (!e) return <View key={colIdx} style={styles.emotionCell} />;
-                      const active = (todayEmotions ?? []).includes(e.id);
-                      return (
-                        <TouchableOpacity
-                          key={e.id}
-                          style={[
-                            styles.emotionCell,
-                            { borderColor: 'transparent', backgroundColor: colors.bg },
-                            active && { borderColor: colors.accent },
-                          ]}
-                          onPress={() => onToggleEmotion(e.id)}
-                          activeOpacity={0.7}
-                        >
-                          <Text style={styles.emotionEmoji}>{e.emoji}</Text>
-                          <Text style={[
-                            styles.emotionLabel, { color: colors.bright },
-                            active && { color: colors.accent },
-                          ]}>{e.label}</Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                );
-              })}
-            </View>
-
-            {(todayEmotions ?? []).length > 0 && (
-              <View style={styles.trackFooter}>
-                {emotionsSaved ? (
-                  <Text style={[styles.savedConfirm, { color: colors.accent }]}>✓ Saved for today</Text>
-                ) : (
-                  <TouchableOpacity
-                    style={[styles.doneBtn, { borderColor: colors.accent }]}
-                    onPress={() => onConfirmSave(todayEmotions)}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={[styles.doneBtnText, { color: colors.accent }]}>
-                      Done — save {todayEmotions.length} feeling{todayEmotions.length > 1 ? 's' : ''}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            )}
-          </View>
-
-          <View style={[styles.divider, { backgroundColor: colors.bright }]} />
-
-          {/* Habit tracker */}
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.bright }]}>
-              Today's <Text style={[styles.sectionTitleEm, { color: colors.accent }]}>habits.</Text>
-            </Text>
-            <View style={styles.habitGrid}>
-              {HABITS.map((h) => {
-                const active = (todayHabits ?? []).includes(h.id);
-                return (
-                  <TouchableOpacity
-                    key={h.id}
-                    style={[
-                      styles.habitPill,
-                      { borderColor: 'transparent', backgroundColor: colors.bg },
-                      active && { borderColor: colors.accent },
-                    ]}
-                    onPress={() => onToggleHabit(h.id)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.habitEmoji}>{h.emoji}</Text>
-                    <Text style={[
-                      styles.habitLabel, { color: colors.bright },
-                      active && { color: colors.accent },
-                    ]}>{h.label}</Text>
-                    {active && (
-                      <View style={[styles.habitCheck, { backgroundColor: colors.accent }]}>
-                        <Text style={styles.habitCheckMark}>✓</Text>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-            {(todayHabits ?? []).length > 0 && (
-              <View style={styles.trackFooter}>
-                {habitsSaved ? (
-                  <Text style={[styles.savedConfirm, { color: colors.accent }]}>✓ Saved for today</Text>
-                ) : (
-                  <TouchableOpacity
-                    style={[styles.doneBtn, { borderColor: colors.accent }]}
-                    onPress={() => onConfirmHabitSave(todayHabits)}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={[styles.doneBtnText, { color: colors.accent }]}>
-                      Done — save {todayHabits.length} habit{todayHabits.length > 1 ? 's' : ''}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            )}
-          </View>
-
-          <View style={[styles.divider, { backgroundColor: colors.bright }]} />
-
-          {/* Photo */}
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.bright }]}>
-              Today's <Text style={[styles.sectionTitleEm, { color: colors.accent }]}>moment.</Text>
-            </Text>
-            {todayPhoto ? (
-              <TouchableOpacity onPress={handlePhotoPress} activeOpacity={0.9}>
-                <Image source={{ uri: todayPhoto }} style={styles.photo} resizeMode="cover" />
-                <Text style={[styles.photoHint, { color: colors.bright }]}>Tap to replace or remove</Text>
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity
-                style={[styles.photoPlaceholder, { borderColor: colors.bright, backgroundColor: colors.surface }]}
-                onPress={handlePhotoPress}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.photoPlaceholderIcon, { color: colors.bright }]}>◻</Text>
-                <Text style={[styles.photoPlaceholderText, { color: colors.bright }]}>Add a photo to today's log</Text>
-                <Text style={[styles.photoPlaceholderHint, { color: colors.bright }]}>camera or library</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          <View style={[styles.divider, { backgroundColor: colors.bright }]} />
-
-          {/* Voice notes */}
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.bright }]}>
-              Today's <Text style={[styles.sectionTitleEm, { color: colors.accent }]}>voice.</Text>
-            </Text>
-            {todayVoiceNotes.map(note => (
-              <View key={note.id} style={styles.voiceNoteItem}>
-                <VoiceNotePlayback
-                  note={note}
-                  onDelete={() => onDeleteVoiceNote(note.id)}
-                />
+          <Text style={[styles.sectionTitle, { color: colors.bright }]}>
+            How are you <Text style={[styles.sectionTitleEm, { color: colors.accent }]}>feeling?</Text>
+          </Text>
+          <View style={styles.emotionChips}>
+            {Array.from({ length: 5 }, (_, i) => (
+              <View key={i} style={styles.emotionRow}>
+                {[EMOTIONS[i * 2], EMOTIONS[i * 2 + 1]].map((e) => {
+                  const active = (todayEmotions ?? []).includes(e.id);
+                  return (
+                    <TouchableOpacity
+                      key={e.id}
+                      style={[
+                        styles.emotionChip,
+                        { backgroundColor: active ? colors.accent : colors.surface },
+                      ]}
+                      onPress={() => onToggleEmotion(e.id)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.emotionEmoji}>{e.emoji}</Text>
+                      <Text style={[styles.emotionLabel, { color: active ? colors.white : colors.dim }]}>
+                        {e.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             ))}
-            <View style={todayVoiceNotes.length > 0 ? styles.voiceNoteSpacing : undefined}>
-              <VoiceNoteRecorder onSave={onAddVoiceNote} />
+          </View>
+          {(todayEmotions ?? []).length > 0 && (
+            <View style={styles.trackFooter}>
+              {emotionsSaved ? (
+                <Text style={[styles.savedConfirm, { color: colors.accent }]}>✓ Saved for today</Text>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.doneBtn, { borderColor: colors.accent }]}
+                  onPress={() => onConfirmSave(todayEmotions)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.doneBtnText, { color: colors.accent }]}>
+                    Done — save {todayEmotions.length} feeling{todayEmotions.length > 1 ? 's' : ''}
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
+          )}
+
+          {/* Habit tracker */}
+          <Text style={[styles.sectionTitle, { color: colors.bright }]}>
+            Today's <Text style={[styles.sectionTitleEm, { color: colors.accent }]}>habits.</Text>
+          </Text>
+          <View style={styles.habitList}>
+            {HABITS.map((h) => {
+              const active = (todayHabits ?? []).includes(h.id);
+              return (
+                <TouchableOpacity
+                  key={h.id}
+                  style={[
+                    styles.habitItem,
+                    { backgroundColor: colors.surface, borderColor: active ? colors.accent : 'transparent' },
+                  ]}
+                  onPress={() => onToggleHabit(h.id)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.habitEmoji}>{h.emoji}</Text>
+                  <Text style={[styles.habitLabel, { color: colors.bright }]}>{h.label}</Text>
+                  {active && (
+                    <View style={[styles.habitCheck, { backgroundColor: colors.accent }]}>
+                      <Text style={[styles.habitCheckMark, { color: colors.white }]}>✓</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          {(todayHabits ?? []).length > 0 && (
+            <View style={styles.trackFooter}>
+              {habitsSaved ? (
+                <Text style={[styles.savedConfirm, { color: colors.accent }]}>✓ Saved for today</Text>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.doneBtn, { borderColor: colors.accent }]}
+                  onPress={() => onConfirmHabitSave(todayHabits)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.doneBtnText, { color: colors.accent }]}>
+                    Done — save {todayHabits.length} habit{todayHabits.length > 1 ? 's' : ''}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+
+          {/* Photo */}
+          <Text style={[styles.sectionTitle, { color: colors.bright }]}>
+            Today's <Text style={[styles.sectionTitleEm, { color: colors.accent }]}>moment.</Text>
+          </Text>
+          {todayPhoto ? (
+            <TouchableOpacity onPress={handlePhotoPress} activeOpacity={0.9}>
+              <Image source={{ uri: todayPhoto }} style={styles.photo} resizeMode="cover" />
+              <Text style={[styles.photoHint, { color: colors.muted }]}>Tap to replace or remove</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={[styles.photoPlaceholder, { borderColor: colors.border2, backgroundColor: colors.surface }]}
+              onPress={handlePhotoPress}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.photoPlaceholderIcon, { color: colors.muted }]}>◻</Text>
+              <Text style={[styles.photoPlaceholderText, { color: colors.muted }]}>Add a photo to today's log</Text>
+              <Text style={[styles.photoPlaceholderHint, { color: colors.muted }]}>camera or library</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Voice notes */}
+          <Text style={[styles.sectionTitle, { color: colors.bright }]}>
+            Today's <Text style={[styles.sectionTitleEm, { color: colors.accent }]}>voice.</Text>
+          </Text>
+          {todayVoiceNotes.map(note => (
+            <View key={note.id} style={styles.voiceNoteItem}>
+              <VoiceNotePlayback
+                note={note}
+                onDelete={() => onDeleteVoiceNote(note.id)}
+              />
+            </View>
+          ))}
+          <View style={todayVoiceNotes.length > 0 ? styles.voiceNoteSpacing : undefined}>
+            <VoiceNoteRecorder onSave={onAddVoiceNote} />
           </View>
 
         </Animated.View>
       </ScrollView>
+
+      {/* Voice modal (shortcut from compose Record button) */}
+      <Modal
+        visible={voiceModalOpen}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setVoiceModalOpen(false)}
+      >
+        <SafeAreaView style={[styles.voiceModal, { backgroundColor: colors.bg }]} edges={['bottom', 'top']}>
+          <View style={[styles.voiceModalHeader, { borderBottomColor: colors.border }]}>
+            <Text style={[styles.voiceModalTitle, { color: colors.bright }]}>Record a voice note</Text>
+            <TouchableOpacity onPress={() => setVoiceModalOpen(false)} activeOpacity={0.7}>
+              <Text style={[styles.voiceModalClose, { color: colors.bright }]}>Close</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.voiceModalBody}>
+            <VoiceNoteRecorder
+              onSave={async (uri, ms) => {
+                await onAddVoiceNote(uri, ms);
+                setVoiceModalOpen(false);
+              }}
+            />
+          </View>
+        </SafeAreaView>
+      </Modal>
 
       {/* Full-screen writing modal */}
       <Modal
@@ -361,7 +363,7 @@ export default function DashboardScreen({
         onRequestClose={() => setEditorOpen(false)}
       >
         <SafeAreaView style={[styles.editorModal, { backgroundColor: colors.bg }]} edges={['bottom']}>
-          <View style={[styles.editorHeader, { borderBottomColor: colors.bright, paddingTop: insets.top + 12 }]}>
+          <View style={[styles.editorHeader, { borderBottomColor: colors.border, paddingTop: insets.top + 12 }]}>
             <TouchableOpacity onPress={() => setEditorOpen(false)} activeOpacity={0.7}>
               <Text style={[styles.editorCancel, { color: colors.bright }]}>Cancel</Text>
             </TouchableOpacity>
@@ -380,7 +382,6 @@ export default function DashboardScreen({
               </Text>
             </TouchableOpacity>
           </View>
-
           <RichTextEditor value={body} onChangeValue={setBody} />
         </SafeAreaView>
       </Modal>
@@ -391,77 +392,106 @@ export default function DashboardScreen({
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+
+  // Header banner
+  headerBanner: { paddingHorizontal: 22, paddingTop: 18, paddingBottom: 22, borderBottomLeftRadius: 30, borderBottomRightRadius: 30},
+  headerDate: {
+    fontFamily: 'DMSans_700Bold', fontSize: 9,
+    letterSpacing: 2, textTransform: 'uppercase',
+    marginBottom: 8,
+  },
+  headerTitle: {
+    fontFamily: 'Fraunces_900Black', fontSize: 26,
+    textTransform: 'uppercase', letterSpacing: -0.5, lineHeight: 30,
+  },
+  headerTitleEm: { fontFamily: 'Fraunces_900Black_Italic', textTransform: 'none' },
+
   scroll: { flex: 1 },
-  scrollContent: { paddingHorizontal: 28, paddingTop: 16, paddingBottom: 60 },
+  scrollContent: { paddingHorizontal: 18, paddingTop: 16, paddingBottom: 60 },
 
-  date: { fontFamily: 'System', fontSize: 9, fontWeight: '600', letterSpacing: 1.4, textTransform: 'uppercase', marginBottom: 22 },
-  title: { fontFamily: 'Georgia', fontSize: 36, fontWeight: '300', lineHeight: 40, letterSpacing: -0.8, marginBottom: 26 },
-  titleEm: { fontStyle: 'italic' },
-
-  quoteWrap: { flexDirection: 'row', gap: 14, marginBottom: 24, paddingBottom: 24, borderBottomWidth: 1 },
-  quoteBorder: { width: 1 },
-  quote: { flex: 1, fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 13, lineHeight: 22 },
-
-  streakWrap: { marginBottom: 8 },
-  streakHeader: { flexDirection: 'row', alignItems: 'baseline', marginBottom: 12 },
-  streakCount: { fontFamily: 'Georgia', fontSize: 30, fontWeight: '300', lineHeight: 34 },
-  streakLabel: { fontFamily: 'System', fontSize: 8, fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase', marginLeft: 6 },
-  streakCycle: { fontFamily: 'System', fontSize: 8, fontWeight: '400', letterSpacing: 0.6 },
-  streakSegments: { flexDirection: 'row', gap: 6, marginBottom: 8 },
-  streakSegment: { flex: 1, height: 4, borderRadius: 2 },
-  streakDayHint: { fontFamily: 'System', fontSize: 8, fontWeight: '400', letterSpacing: 0.8, textTransform: 'uppercase' },
-
-  divider: { height: 1, marginVertical: 24 },
-
-  composeTrigger: { borderWidth: 1, borderStyle: 'dashed', paddingVertical: 16, paddingHorizontal: 14, marginBottom: 0 },
-  composeTriggerText: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 15, lineHeight: 24 },
-  editorModal: { flex: 1 },
-  editorHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 14, borderBottomWidth: 1 },
-  editorTitle: { fontFamily: 'System', fontSize: 9, fontWeight: '600', letterSpacing: 1.2, textTransform: 'uppercase' },
-  editorCancel: { fontFamily: 'System', fontSize: 10, fontWeight: '500' },
-  editorSave: { fontFamily: 'System', fontSize: 10, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase' },
-
-  section: { marginBottom: 0 },
-  sectionTitle: { fontFamily: 'Georgia', fontSize: 20, fontWeight: '300', letterSpacing: -0.3, marginBottom: 18 },
-  sectionTitleEm: { fontStyle: 'italic' },
-
-  // Emotion 2-column grid
-  emotionGrid: { flexDirection: 'column', gap: 8, marginBottom: 0 },
-  emotionRow: { flexDirection: 'row', gap: 8 },
-  emotionCell: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderWidth: 1,
+  // Streak pill card
+  streakCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    borderRadius: 50, paddingVertical: 10, paddingHorizontal: 18, marginBottom: 16,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08, shadowRadius: 10, elevation: 3,
   },
-  emotionEmoji: { fontSize: 15 },
-  emotionLabel: { fontFamily: 'System', fontSize: 10, fontWeight: '500', flexShrink: 1 },
-
-  // Habit tracker
-  habitGrid: { flexDirection: 'column', gap: 10, marginBottom: 0 },
-  habitPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingVertical: 14, paddingHorizontal: 16, borderWidth: 1,
+  streakNum: { fontFamily: 'Fraunces_900Black', fontSize: 30, lineHeight: 34 },
+  streakCardInfo: { flex: 1 },
+  streakCardLabel: {
+    fontFamily: 'DMSans_700Bold', fontSize: 8,
+    letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 6,
   },
-  habitEmoji: { fontSize: 18 },
-  habitLabel: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 15, fontWeight: '300', flex: 1 },
+  streakSegs: { flexDirection: 'row', gap: 4 },
+  streakSeg: { flex: 1, height: 4, borderRadius: 2 },
+
+  // Compose box
+  composeBox: { borderRadius: 18, borderWidth: 1.5, borderStyle: 'dashed', padding: 14, marginBottom: 24 },
+  composePlaceholder: { fontFamily: 'Fraunces_300Light_Italic', fontSize: 13, lineHeight: 22, marginBottom: 12 },
+  composeActions: { flexDirection: 'row', gap: 8 },
+  composeBtnPrimary: { borderRadius: 50, paddingVertical: 7, paddingHorizontal: 16 },
+  composeBtnSecondary: { borderRadius: 50, paddingVertical: 7, paddingHorizontal: 16 },
+  composeBtnText: { fontFamily: 'DMSans_700Bold', fontSize: 9, letterSpacing: 0.8, textTransform: 'uppercase' },
+
+  // Section titles
+  sectionTitle: {
+    fontFamily: 'Fraunces_900Black', fontSize: 13,
+    textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: 12, marginTop: 8,
+  },
+  sectionTitleEm: { fontFamily: 'Fraunces_300Light_Italic', textTransform: 'none' },
+
+  // Emotion chips
+  emotionChips: { gap: 7, marginBottom: 12 },
+  emotionRow: { flexDirection: 'row', gap: 7 },
+  emotionChip: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, borderRadius: 50, paddingVertical: 7, paddingHorizontal: 4 },
+  emotionEmoji: { fontSize: 13 },
+  emotionLabel: { fontFamily: 'DMSans_600SemiBold', fontSize: 10 },
+
+  // Habit items
+  habitList: { gap: 6, marginBottom: 12 },
+  habitItem: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    borderRadius: 12, paddingVertical: 11, paddingHorizontal: 14, borderWidth: 1.5,
+  },
+  habitEmoji: { fontSize: 16 },
+  habitLabel: { fontFamily: 'Fraunces_300Light_Italic', fontSize: 14, flex: 1 },
   habitCheck: { width: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  habitCheckMark: { color: '#fff', fontSize: 11, fontWeight: '700' },
+  habitCheckMark: { fontSize: 10, fontWeight: '700' },
 
-  trackFooter: { alignItems: 'flex-start', marginTop: 16 },
-  doneBtn: { borderWidth: 1, paddingHorizontal: 18, paddingVertical: 10 },
-  doneBtnText: { fontFamily: 'System', fontSize: 10, fontWeight: '600', letterSpacing: 0.8, textTransform: 'uppercase' },
-  savedConfirm: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 13 },
+  trackFooter: { alignItems: 'flex-start', marginTop: 10, marginBottom: 20 },
+  doneBtn: { borderWidth: 1, borderRadius: 50, paddingHorizontal: 18, paddingVertical: 8 },
+  doneBtnText: { fontFamily: 'DMSans_600SemiBold', fontSize: 9, letterSpacing: 0.8, textTransform: 'uppercase' },
+  savedConfirm: { fontFamily: 'Fraunces_300Light_Italic', fontSize: 13 },
 
   voiceNoteItem: { marginBottom: 8 },
   voiceNoteSpacing: { marginTop: 8 },
-  photo: { width: '100%', height: 240, marginBottom: 4 },
-  photoHint: { fontFamily: 'System', fontSize: 9, fontStyle: 'italic', marginBottom: 0 },
-  photoPlaceholder: { width: '100%', height: 160, borderWidth: 1, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 0 },
-  photoPlaceholderIcon: { fontSize: 28 },
-  photoPlaceholderText: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 14 },
-  photoPlaceholderHint: { fontFamily: 'System', fontSize: 9, letterSpacing: 0.8, textTransform: 'uppercase' },
+  photo: { width: '100%', height: 240, borderRadius: 12, marginBottom: 4 },
+  photoHint: { fontFamily: 'DMSans_400Regular', fontSize: 9, marginBottom: 0 },
+  photoPlaceholder: {
+    width: '100%', height: 140, borderRadius: 12, borderWidth: 1.5, borderStyle: 'dashed',
+    alignItems: 'center', justifyContent: 'center', gap: 6,
+  },
+  photoPlaceholderIcon: { fontSize: 24 },
+  photoPlaceholderText: { fontFamily: 'Fraunces_300Light_Italic', fontSize: 13 },
+  photoPlaceholderHint: { fontFamily: 'DMSans_700Bold', fontSize: 9, letterSpacing: 0.8, textTransform: 'uppercase' },
+
+  // Voice modal
+  voiceModal: { flex: 1 },
+  voiceModalHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 22, paddingVertical: 16, borderBottomWidth: 1,
+  },
+  voiceModalTitle: { fontFamily: 'Fraunces_300Light_Italic', fontSize: 18 },
+  voiceModalClose: { fontFamily: 'System', fontSize: 10, fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase' },
+  voiceModalBody: { flex: 1, padding: 28 },
+
+  // Editor modal
+  editorModal: { flex: 1 },
+  editorHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 20, paddingTop: 16, paddingBottom: 14, borderBottomWidth: 1,
+  },
+  editorTitle: { fontFamily: 'System', fontSize: 9, fontWeight: '600', letterSpacing: 1.2, textTransform: 'uppercase' },
+  editorCancel: { fontFamily: 'System', fontSize: 10, fontWeight: '500' },
+  editorSave: { fontFamily: 'System', fontSize: 10, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase' },
 });

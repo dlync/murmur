@@ -263,67 +263,65 @@ export default function ArchiveScreen({
   return (
     <View style={[styles.root, { backgroundColor: colors.bg }]}>
 
+      {/* Header banner */}
+      <View style={[styles.headerBanner, { backgroundColor: colors.accent }]}>
+        <Text style={[styles.headerEyebrow, { color: colors.white }]}>{user.username}'s logs</Text>
+        <Text style={[styles.headerTitle, { color: colors.white }]}>
+          Your <Text style={styles.headerTitleEm}>week,</Text>{'\n'}in numbers
+        </Text>
+      </View>
+
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Animated.View style={{ opacity: fadeAnim }}>
 
-          <Text style={[styles.pageTitle, { color: colors.bright }]}>
-            <Text style={[styles.pageTitleEm, { color: colors.accent }]}>{user.username}</Text>
-          </Text>
-          <Text style={[styles.pageSubtitle, { color: colors.bright }]}>your week, in numbers</Text>
-
-          <View style={[styles.divider, { backgroundColor: colors.bright }]} />
-
           {/* Weekly stats strip */}
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.bright }]}>
-              This <Text style={[styles.sectionTitleEm, { color: colors.accent }]}>week</Text>
-            </Text>
             <View style={styles.weekStatsGrid}>
 
-              <View style={[styles.weekStatCell, { borderColor: colors.bright }]}>
+              <View style={[styles.weekStatCell, { backgroundColor: colors.surface }]}>
                 <Text style={styles.weekStatEmoji}>📷</Text>
                 <Text style={[styles.weekStatNum, { color: colors.accent }]}>{weekStats.photos}</Text>
-                <Text style={[styles.weekStatLabel, { color: colors.bright }]}>
+                <Text style={[styles.weekStatLabel, { color: colors.muted }]}>
                   {plural(weekStats.photos, 'photo', 'photos')}
                 </Text>
               </View>
 
-              <View style={[styles.weekStatCell, { borderColor: colors.bright }]}>
+              <View style={[styles.weekStatCell, { backgroundColor: colors.surface }]}>
                 <Text style={styles.weekStatEmoji}>🎙</Text>
                 <Text style={[styles.weekStatNum, { color: colors.accent }]}>{weekStats.notes}</Text>
-                <Text style={[styles.weekStatLabel, { color: colors.bright }]}>
+                <Text style={[styles.weekStatLabel, { color: colors.muted }]}>
                   {plural(weekStats.notes, 'voice note', 'voice notes')}
                 </Text>
               </View>
 
-              <View style={[styles.weekStatCell, { borderColor: colors.bright }]}>
+              <View style={[styles.weekStatCell, { backgroundColor: colors.surface }]}>
                 <Text style={styles.weekStatEmoji}>🏃</Text>
                 <Text style={[styles.weekStatNum, { color: colors.accent }]}>{weekStats.habitCounts['exercise'] ?? 0}</Text>
-                <Text style={[styles.weekStatLabel, { color: colors.bright }]}>
+                <Text style={[styles.weekStatLabel, { color: colors.muted }]}>
                   {plural(weekStats.habitCounts['exercise'] ?? 0, 'workout', 'workouts')}
                 </Text>
               </View>
 
-              <View style={[styles.weekStatCell, { borderColor: colors.bright }]}>
+              <View style={[styles.weekStatCell, { backgroundColor: colors.surface }]}>
                 <Text style={styles.weekStatEmoji}>📖</Text>
                 <Text style={[styles.weekStatNum, { color: colors.accent }]}>{weekStats.habitCounts['reading'] ?? 0}</Text>
-                <Text style={[styles.weekStatLabel, { color: colors.bright }]}>
+                <Text style={[styles.weekStatLabel, { color: colors.muted }]}>
                   {plural(weekStats.habitCounts['reading'] ?? 0, 'reading day', 'reading days')}
                 </Text>
               </View>
 
-              <View style={[styles.weekStatCell, { borderColor: colors.bright }]}>
+              <View style={[styles.weekStatCell, { backgroundColor: colors.surface }]}>
                 <Text style={styles.weekStatEmoji}>🥗</Text>
                 <Text style={[styles.weekStatNum, { color: colors.accent }]}>{weekStats.habitCounts['diet'] ?? 0}</Text>
-                <Text style={[styles.weekStatLabel, { color: colors.bright }]}>
+                <Text style={[styles.weekStatLabel, { color: colors.muted }]}>
                   {plural(weekStats.habitCounts['diet'] ?? 0, 'good eat', 'good eats')}
                 </Text>
               </View>
 
-              <View style={[styles.weekStatCell, { borderColor: colors.bright }]}>
+              <View style={[styles.weekStatCell, { backgroundColor: colors.surface }]}>
                 <Text style={styles.weekStatEmoji}>😴</Text>
                 <Text style={[styles.weekStatNum, { color: colors.accent }]}>{weekStats.habitCounts['sleep'] ?? 0}</Text>
-                <Text style={[styles.weekStatLabel, { color: colors.bright }]}>
+                <Text style={[styles.weekStatLabel, { color: colors.muted }]}>
                   {plural(weekStats.habitCounts['sleep'] ?? 0, 'good sleep', 'good sleeps')}
                 </Text>
               </View>
@@ -331,15 +329,13 @@ export default function ArchiveScreen({
             </View>
           </View>
 
-          <View style={[styles.divider, { backgroundColor: colors.bright }]} />
-
           {/* Longest entry */}
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.bright }]}>
               Longest <Text style={[styles.sectionTitleEm, { color: colors.accent }]}>this week</Text>
             </Text>
             {longestThought ? (
-              <View style={[styles.longestCard, { borderColor: colors.bright }]}>
+              <View style={[styles.longestCard, { backgroundColor: colors.surface }]}>
                 <View style={styles.longestMeta}>
                   <Text style={[styles.longestNum, { color: colors.accent }]}>{longestWordCount}</Text>
                   <Text style={[styles.longestUnits, { color: colors.bright }]}> words</Text>
@@ -358,8 +354,6 @@ export default function ArchiveScreen({
               <Text style={[styles.emptyText, { color: colors.bright }]}>No entries written this week yet.</Text>
             )}
           </View>
-
-          <View style={[styles.divider, { backgroundColor: colors.bright }]} />
 
           {/* Emotion bar chart */}
           <View style={styles.section}>
@@ -384,8 +378,6 @@ export default function ArchiveScreen({
             )}
           </View>
 
-          <View style={[styles.divider, { backgroundColor: colors.bright }]} />
-
           {/* Calendar */}
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.bright }]}>
@@ -393,8 +385,12 @@ export default function ArchiveScreen({
             </Text>
 
             <View style={styles.monthNav}>
-              <TouchableOpacity onPress={prevMonth} style={styles.monthNavBtn} activeOpacity={0.7}>
-                <Text style={[styles.monthNavArrow, { color: colors.bright }]}>←</Text>
+              <TouchableOpacity
+                onPress={prevMonth}
+                style={[styles.monthNavBtn, { backgroundColor: colors.accent }]}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.monthNavArrow, { color: colors.white }]}>←</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={goToday} activeOpacity={0.7} style={styles.monthTitleWrap}>
                 <Text style={[styles.monthTitle, { color: colors.bright }]}>
@@ -405,8 +401,12 @@ export default function ArchiveScreen({
                   <Text style={[styles.todayHint, { color: colors.accent }]}>Tap to return to today</Text>
                 )}
               </TouchableOpacity>
-              <TouchableOpacity onPress={nextMonth} style={styles.monthNavBtn} activeOpacity={0.7}>
-                <Text style={[styles.monthNavArrow, { color: colors.bright }]}>→</Text>
+              <TouchableOpacity
+                onPress={nextMonth}
+                style={[styles.monthNavBtn, { backgroundColor: colors.accent }]}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.monthNavArrow, { color: colors.white }]}>→</Text>
               </TouchableOpacity>
             </View>
 
@@ -423,28 +423,30 @@ export default function ArchiveScreen({
                 const future = isFuture(d);
                 const hasData = !future && dayHasActivity(d);
                 const hasEvents = hasEventOnDate(d);
+                const cellBg = isToday
+                  ? colors.accent
+                  : hasData
+                    ? colors.surface2
+                    : colors.surface;
+                const numColor = isToday ? colors.white : future ? colors.muted : colors.bright;
                 return (
                   <TouchableOpacity
                     key={i}
-                    style={[
-                      styles.calCell,
-                      { borderColor: colors.bright, backgroundColor: colors.bg },
-                      isToday && { borderColor: colors.accent },
-                    ]}
+                    style={[styles.calCell, { backgroundColor: cellBg }]}
                     onPress={() => handleDayPress(d)}
                     activeOpacity={0.7}
                   >
                     <Text style={[
                       styles.calDayNum,
-                      { color: colors.bright },
-                      future && { opacity: 0.35 },
-                      isToday && { color: colors.accent, opacity: 1, fontWeight: '700' },
+                      { color: numColor },
+                      future && !isToday && { opacity: 0.4 },
+                      isToday && { fontWeight: '700' },
                     ]}>
                       {parseInt(d.split('-')[2])}
                     </Text>
                     <View style={styles.calDotRow}>
-                      <View style={[styles.calDot, { backgroundColor: hasData ? colors.bright : 'transparent' }]} />
-                      <View style={[styles.calDot, { backgroundColor: hasEvents ? colors.accent : 'transparent' }]} />
+                      <View style={[styles.calDot, { backgroundColor: hasData && !isToday ? colors.accent : 'transparent' }]} />
+                      <View style={[styles.calDot, { backgroundColor: hasEvents && !isToday ? colors.accentD : 'transparent' }]} />
                     </View>
                   </TouchableOpacity>
                 );
@@ -721,100 +723,112 @@ export default function ArchiveScreen({
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  scrollContent: { paddingHorizontal: 28, paddingTop: 28, paddingBottom: 60 },
+  scrollContent: { paddingHorizontal: 18, paddingTop: 16, paddingBottom: 60 },
 
-  pageTitle: { fontFamily: 'Georgia', fontSize: 32, fontWeight: '300', letterSpacing: -0.5, marginBottom: 4 },
-  pageTitleEm: { fontStyle: 'italic' },
-  pageSubtitle: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 13, marginBottom: 16 },
+  // Header banner
+  headerBanner: { paddingHorizontal: 22, paddingTop: 18, paddingBottom: 22, borderBottomLeftRadius: 30, borderBottomRightRadius: 30},
+  headerEyebrow: {
+    fontFamily: 'DMSans_700Bold', fontSize: 9,
+    letterSpacing: 2, textTransform: 'uppercase',
+    marginBottom: 8,
+  },
+  headerTitle: { fontFamily: 'Fraunces_900Black', fontSize: 26, textTransform: 'uppercase', letterSpacing: -0.5, lineHeight: 30 },
+  headerTitleEm: { fontFamily: 'Fraunces_900Black_Italic', textTransform: 'none' },
 
   divider: { height: 1, marginVertical: 16 },
-
-  section: { marginBottom: 0 },
-  sectionTitle: { fontFamily: 'Georgia', fontSize: 20, fontWeight: '300', letterSpacing: -0.3, marginBottom: 18 },
-  sectionTitleEm: { fontStyle: 'italic' },
-  emptyText: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 13 },
+  section: { marginBottom: 20 },
+  sectionTitle: {
+    fontFamily: 'Fraunces_900Black', fontSize: 13,
+    textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: 12, marginTop: 4,
+  },
+  sectionTitleEm: { fontFamily: 'Fraunces_300Light_Italic', textTransform: 'none' },
+  emptyText: { fontFamily: 'Fraunces_300Light_Italic', fontSize: 13 },
 
   weekStatsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  weekStatCell: { width: '30%', flexGrow: 1, borderWidth: 1, paddingVertical: 14, paddingHorizontal: 10, alignItems: 'center', gap: 4 },
+  weekStatCell: {
+    width: '30%', flexGrow: 1, borderRadius: 14,
+    paddingVertical: 14, paddingHorizontal: 10, alignItems: 'center', gap: 4,
+  },
   weekStatEmoji: { fontSize: 18 },
-  weekStatNum: { fontFamily: 'Georgia', fontSize: 24, fontWeight: '300', lineHeight: 28 },
-  weekStatLabel: { fontFamily: 'System', fontSize: 8, fontWeight: '600', letterSpacing: 0.8, textTransform: 'uppercase', textAlign: 'center' },
+  weekStatNum: { fontFamily: 'Fraunces_900Black', fontSize: 24, lineHeight: 28 },
+  weekStatLabel: { fontFamily: 'DMSans_700Bold', fontSize: 8, letterSpacing: 0.8, textTransform: 'uppercase', textAlign: 'center' },
 
   barChart: { gap: 12 },
   barRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   barEmoji: { fontSize: 15, width: 22 },
   barTrack: { flex: 1, height: 6, borderRadius: 3, overflow: 'hidden' },
   barFill: { height: '100%', borderRadius: 3 },
-  barLabel: { fontFamily: 'System', fontSize: 10, fontWeight: '500', width: 68 },
-  barCount: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 12, width: 20, textAlign: 'right' },
+  barLabel: { fontFamily: 'DMSans_400Regular', fontSize: 10, width: 68 },
+  barCount: { fontFamily: 'Fraunces_300Light_Italic', fontSize: 12, width: 20, textAlign: 'right' },
 
   monthNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 },
-  monthNavBtn: { padding: 8 },
-  monthNavArrow: { fontFamily: 'System', fontSize: 18, fontWeight: '300' },
+  monthNavBtn: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  monthNavArrow: { fontFamily: 'DMSans_700Bold', fontSize: 14 },
   monthTitleWrap: { alignItems: 'center', flex: 1 },
-  monthTitle: { fontFamily: 'Georgia', fontSize: 18, fontWeight: '300', letterSpacing: -0.3 },
-  monthTitleYear: { fontStyle: 'italic' },
-  todayHint: { fontFamily: 'System', fontSize: 8, fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase', marginTop: 3 },
+  monthTitle: { fontFamily: 'Fraunces_900Black', fontSize: 18, letterSpacing: -0.3, textTransform: 'uppercase' },
+  monthTitleYear: { fontFamily: 'Fraunces_300Light_Italic', textTransform: 'none' },
+  todayHint: { fontFamily: 'DMSans_700Bold', fontSize: 8, letterSpacing: 1, textTransform: 'uppercase', marginTop: 3 },
 
-  dowRow: { flexDirection: 'row', marginBottom: 6 },
-  dowLabel: { width: DAY_SIZE, textAlign: 'center', fontFamily: 'System', fontSize: 9, fontWeight: '600', letterSpacing: 0.5 },
-  calGrid: { flexDirection: 'row', flexWrap: 'wrap' },
-  calCell: { width: DAY_SIZE, height: DAY_SIZE, alignItems: 'center', justifyContent: 'center', borderWidth: 1, margin: 1 },
-  calCellEmpty: { width: DAY_SIZE, height: DAY_SIZE, margin: 1 },
-  calDayNum: { fontFamily: 'System', fontSize: 11, fontWeight: '500' },
-  calDotRow: { position: 'absolute', bottom: Math.floor(DAY_SIZE * 0.18), left: Math.floor(DAY_SIZE * 0.18), right: Math.floor(DAY_SIZE * 0.18), flexDirection: 'row', justifyContent: 'space-between' },
+  dowRow: { flexDirection: 'row', marginBottom: 4 },
+  dowLabel: { width: DAY_SIZE, textAlign: 'center', fontFamily: 'DMSans_700Bold', fontSize: 9, letterSpacing: 0.5 },
+  calGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 2 },
+  calCell: { width: DAY_SIZE, height: DAY_SIZE, alignItems: 'center', justifyContent: 'center', borderRadius: 8 },
+  calCellEmpty: { width: DAY_SIZE, height: DAY_SIZE },
+  calDayNum: { fontFamily: 'DMSans_400Regular', fontSize: 11 },
+  calDotRow: { position: 'absolute', bottom: Math.floor(DAY_SIZE * 0.14), left: Math.floor(DAY_SIZE * 0.18), right: Math.floor(DAY_SIZE * 0.18), flexDirection: 'row', justifyContent: 'space-between' },
   calDot: { width: 4, height: 4, borderRadius: 2 },
   calDotPlaceholder: { width: 4, height: 4 },
 
   legend: { flexDirection: 'row', gap: 18, marginTop: 14, flexWrap: 'wrap' },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   legendDot: { width: 8, height: 8, borderRadius: 4 },
-  legendCell: { width: 16, height: 16, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
-  legendCellNum: { fontFamily: 'System', fontSize: 8, fontWeight: '700' },
-  legendText: { fontFamily: 'System', fontSize: 9, fontWeight: '500', letterSpacing: 0.3 },
+  legendCell: { width: 16, height: 16, borderRadius: 4, alignItems: 'center', justifyContent: 'center' },
+  legendCellNum: { fontFamily: 'DMSans_700Bold', fontSize: 8 },
+  legendText: { fontFamily: 'DMSans_400Regular', fontSize: 9, letterSpacing: 0.3 },
+
+  longestCard: { borderRadius: 14, padding: 16, gap: 10 },
 
   modal: { flex: 1 },
   modalContent: { paddingHorizontal: 28, paddingTop: 28, paddingBottom: 60 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 },
   modalHeaderLeft: { flex: 1, gap: 8 },
-  modalDate: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 22, fontWeight: '300', letterSpacing: -0.3, lineHeight: 28 },
-  modalFuturePill: { fontFamily: 'System', fontSize: 8, fontWeight: '700', letterSpacing: 1.2, textTransform: 'uppercase', borderWidth: 1, paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-start' },
-  modalClose: { fontFamily: 'System', fontSize: 10, fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase', paddingTop: 4 },
+  modalDate: { fontFamily: 'Fraunces_300Light_Italic', fontSize: 22, letterSpacing: -0.3, lineHeight: 28 },
+  modalFuturePill: { fontFamily: 'DMSans_700Bold', fontSize: 8, letterSpacing: 1.2, textTransform: 'uppercase', borderWidth: 1, paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-start' },
+  modalClose: { fontFamily: 'DMSans_600SemiBold', fontSize: 10, letterSpacing: 1, textTransform: 'uppercase', paddingTop: 4 },
   modalPhoto: { width: '100%', height: 220, marginBottom: 4 },
   modalSection: { marginBottom: 0 },
-  modalSectionTitle: { fontFamily: 'Georgia', fontSize: 18, fontWeight: '300', marginBottom: 16 },
-  modalSectionEm: { fontStyle: 'italic' },
-  modalEmpty: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 13 },
+  modalSectionTitle: { fontFamily: 'Fraunces_900Black', fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: 16 },
+  modalSectionEm: { fontFamily: 'Fraunces_300Light_Italic' },
+  modalEmpty: { fontFamily: 'Fraunces_300Light_Italic', fontSize: 13 },
 
   eventList: { gap: 10, marginBottom: 16 },
   eventCard: { flexDirection: 'row', overflow: 'hidden' },
   eventCardAccent: { width: 3 },
   eventCardBody: { flex: 1, padding: 14 },
-  eventCardTitle: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 16, fontWeight: '300', marginBottom: 3 },
-  eventCardNote: { fontFamily: 'System', fontSize: 11, lineHeight: 17 },
+  eventCardTitle: { fontFamily: 'Fraunces_300Light_Italic', fontSize: 16, marginBottom: 3 },
+  eventCardNote: { fontFamily: 'DMSans_400Regular', fontSize: 11, lineHeight: 17 },
   eventCardActions: { flexDirection: 'column', justifyContent: 'center', gap: 10, paddingHorizontal: 14 },
-  eventActionText: { fontFamily: 'System', fontSize: 9, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase' },
+  eventActionText: { fontFamily: 'DMSans_700Bold', fontSize: 9, letterSpacing: 0.8, textTransform: 'uppercase' },
 
   addEventBtn: { borderWidth: 1, paddingVertical: 12, paddingHorizontal: 20, alignSelf: 'flex-start' },
-  addEventBtnText: { fontFamily: 'System', fontSize: 10, fontWeight: '700', letterSpacing: 0.9, textTransform: 'uppercase' },
+  addEventBtnText: { fontFamily: 'DMSans_700Bold', fontSize: 10, letterSpacing: 0.9, textTransform: 'uppercase' },
   eventForm: { padding: 18, gap: 14 },
-  eventFormLabel: { fontFamily: 'System', fontSize: 8, fontWeight: '700', letterSpacing: 1.2, textTransform: 'uppercase' },
-  eventFormInput: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 17, paddingVertical: 8, borderBottomWidth: 1 },
-  eventFormNote: { fontFamily: 'System', fontSize: 13, paddingVertical: 8, borderBottomWidth: 1 },
+  eventFormLabel: { fontFamily: 'DMSans_700Bold', fontSize: 8, letterSpacing: 1.2, textTransform: 'uppercase' },
+  eventFormInput: { fontFamily: 'Fraunces_300Light_Italic', fontSize: 17, paddingVertical: 8, borderBottomWidth: 1 },
+  eventFormNote: { fontFamily: 'DMSans_400Regular', fontSize: 13, paddingVertical: 8, borderBottomWidth: 1 },
   eventFormActions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 },
-  eventCancelText: { fontFamily: 'System', fontSize: 10, fontWeight: '500' },
+  eventCancelText: { fontFamily: 'DMSans_400Regular', fontSize: 10 },
   eventSaveBtn: { paddingHorizontal: 18, paddingVertical: 10 },
-  eventSaveBtnText: { fontFamily: 'System', fontSize: 9, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase' },
+  eventSaveBtnText: { fontFamily: 'DMSans_700Bold', fontSize: 9, letterSpacing: 0.8, textTransform: 'uppercase' },
 
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 6, paddingHorizontal: 11 },
   chipEmoji: { fontSize: 13 },
-  chipLabel: { fontFamily: 'System', fontSize: 10, fontWeight: '500' },
+  chipLabel: { fontFamily: 'DMSans_400Regular', fontSize: 10 },
 
   habitRow: { flexDirection: 'column', gap: 8 },
   habitChip: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, paddingHorizontal: 14 },
 
-  longestCard: { borderWidth: 1, padding: 16, gap: 10 },
   longestMeta: { flexDirection: 'row', alignItems: 'baseline' },
   longestNum: { fontFamily: 'Georgia', fontSize: 28, fontWeight: '300', lineHeight: 32 },
   longestUnits: { fontFamily: 'System', fontSize: 8, fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase' },

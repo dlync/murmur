@@ -142,9 +142,12 @@ export const themes: Record<ThemeKey, { label: string; colors: ColorPalette }> =
 export const colors = themes.linen.colors;
 
 export const fonts = {
-  serif: 'Georgia',
-  syne: 'System',
-  sans: 'System',
+  display: 'Fraunces_900Black',
+  displayItalic: 'Fraunces_900Black_Italic',
+  displayLight: 'Fraunces_300Light_Italic',
+  ui: 'DMSans_400Regular',
+  uiSemiBold: 'DMSans_600SemiBold',
+  uiBold: 'DMSans_700Bold',
 };
 
 export const spacing = {

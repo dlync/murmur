@@ -31,7 +31,8 @@
           "color": "#5E7A8A",
           "sounds": []
         }
-      ]
+      ],
+      "expo-font"
     ],
     "newArchEnabled": true
   }

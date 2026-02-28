@@ -2,6 +2,9 @@ import React from 'react';
 import { View, Text, StyleSheet, StatusBar, TouchableOpacity } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFonts } from 'expo-font';
+import { Fraunces_300Light_Italic, Fraunces_900Black, Fraunces_900Black_Italic } from '@expo-google-fonts/fraunces';
+import { DMSans_400Regular, DMSans_600SemiBold, DMSans_700Bold } from '@expo-google-fonts/dm-sans';
 import { themes, ThemeKey } from './constants/theme';
 import { ThemeContext } from './context/ThemeContext';
 import { useThoughts } from './hooks/useThoughts';
@@ -19,6 +22,14 @@ type Tab = 'today' | 'archive' | 'profile';
 const ONBOARDED_KEY = '@murmur_onboarded';
 
 function Inner() {
+  const [fontsLoaded] = useFonts({
+    Fraunces_300Light_Italic,
+    Fraunces_900Black,
+    Fraunces_900Black_Italic,
+    DMSans_400Regular,
+    DMSans_600SemiBold,
+    DMSans_700Bold,
+  });
   const [activeTab, setActiveTab] = React.useState<Tab>('today');
   const [themeKey, setThemeKey] = React.useState<ThemeKey>('linen');
   const [onboarded, setOnboarded] = React.useState<boolean | null>(null);
@@ -44,9 +55,10 @@ function Inner() {
     setOnboarded(true);
   }
 
-  const isDark = themeKey === 'ember' || themeKey === 'pine' || themeKey === 'noir' || themeKey === 'carbon';
+  // Carbon has a near-white accent; all others are dark enough for light status bar icons
+  const accentIsLight = themeKey === 'carbon';
 
-  if (loading || onboarded === null) {
+  if (loading || onboarded === null || !fontsLoaded) {
     return (
       <View style={[styles.loading, { backgroundColor: colors.bg }]}>
         <Text style={[styles.loadingText, { color: colors.muted }]}>m.</Text>
@@ -57,7 +69,7 @@ function Inner() {
   if (!onboarded) {
     return (
       <ThemeContext.Provider value={{ themeKey, colors, setTheme }}>
-        <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.bg} />
+        <StatusBar barStyle={accentIsLight ? 'dark-content' : 'light-content'} backgroundColor={colors.bg} />
         <OnboardingScreen onComplete={completeOnboarding} />
       </ThemeContext.Provider>
     );
@@ -65,17 +77,12 @@ function Inner() {
 
   return (
     <ThemeContext.Provider value={{ themeKey, colors, setTheme }}>
-      <SafeAreaView style={[styles.root, { backgroundColor: colors.bg }]} edges={['top', 'left', 'right']}>
+      <SafeAreaView style={[styles.root, { backgroundColor: colors.accent }]} edges={['top', 'left', 'right']}>
         <StatusBar
-          barStyle={isDark ? 'light-content' : 'dark-content'}
-          backgroundColor={colors.bg}
+          barStyle={accentIsLight ? 'dark-content' : 'light-content'}
+          backgroundColor={colors.accent}
         />
-        <View style={[styles.header, { backgroundColor: colors.bg, borderBottomColor: colors.border }]}>
-          <Text style={[styles.headerLogo, { color: colors.bright }]}>
-            m<Text style={[styles.headerDot, { color: colors.accent }]}>.</Text>
-          </Text>
-        </View>
-        <View style={styles.content}>
+        <View style={[styles.content, { backgroundColor: colors.bg }]}>
           {activeTab === 'today' && (
             <DashboardScreen
               thoughts={thoughts}
@@ -156,14 +163,11 @@ export default function App() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  loadingText: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 28, fontWeight: '300' },
-  header: { height: 50, alignItems: 'center', justifyContent: 'center', borderBottomWidth: 1 },
-  headerLogo: { fontFamily: 'Georgia', fontStyle: 'italic', fontWeight: '300', fontSize: 20, letterSpacing: 0.2 },
-  headerDot: { fontStyle: 'normal' },
+  loadingText: { fontFamily: 'Fraunces_300Light_Italic', fontSize: 28 },
   content: { flex: 1 },
   tabBarSafe: {},
   tabBar: { flexDirection: 'row', borderTopWidth: 1, height: 54 },
   tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 5 },
-  tabLabel: { fontFamily: 'System', fontSize: 9, fontWeight: '600', letterSpacing: 1.2, textTransform: 'uppercase' },
+  tabLabel: { fontFamily: 'DMSans_700Bold', fontSize: 9, letterSpacing: 1.2, textTransform: 'uppercase' },
   tabDot: { width: 3, height: 3, borderRadius: 1.5 },
 });
